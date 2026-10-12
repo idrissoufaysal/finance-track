@@ -5,9 +5,10 @@ import { toISODate } from '@/utils/dateUtils';
 const STORAGE_KEY_TRANSACTIONS = '@finance_track_transactions_v1';
 const STORAGE_KEY_BUDGETS = '@finance_track_budgets_v1';
 
-/**
- * Generates realistic initial seed transactions so the app is immediately alive
- */
+// In-memory fallback in case native AsyncStorage has issues
+let memoryTransactions: Transaction[] | null = null;
+let memoryBudgets: Budget[] | null = null;
+
 export function generateDemoTransactions(): Transaction[] {
   const now = new Date();
   const txs: Transaction[] = [];
@@ -89,22 +90,31 @@ export async function loadTransactions(): Promise<Transaction[]> {
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY_TRANSACTIONS);
     if (!raw) {
-      const demo = generateDemoTransactions();
-      await AsyncStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(demo));
+      const demo = memoryTransactions || generateDemoTransactions();
+      memoryTransactions = demo;
+      try {
+        await AsyncStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(demo));
+      } catch {}
       return demo;
     }
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    memoryTransactions = parsed;
+    return parsed;
   } catch (error) {
-    console.error('Error loading transactions from storage:', error);
-    return generateDemoTransactions();
+    console.warn('AsyncStorage fallback for transactions:', error);
+    if (!memoryTransactions) {
+      memoryTransactions = generateDemoTransactions();
+    }
+    return memoryTransactions;
   }
 }
 
 export async function saveTransactions(transactions: Transaction[]): Promise<void> {
+  memoryTransactions = transactions;
   try {
     await AsyncStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(transactions));
   } catch (error) {
-    console.error('Error saving transactions to storage:', error);
+    console.warn('AsyncStorage save fallback:', error);
   }
 }
 
@@ -112,28 +122,42 @@ export async function loadBudgets(): Promise<Budget[]> {
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY_BUDGETS);
     if (!raw) {
-      await AsyncStorage.setItem(STORAGE_KEY_BUDGETS, JSON.stringify(DEFAULT_BUDGETS));
-      return DEFAULT_BUDGETS;
+      const demo = memoryBudgets || DEFAULT_BUDGETS;
+      memoryBudgets = demo;
+      try {
+        await AsyncStorage.setItem(STORAGE_KEY_BUDGETS, JSON.stringify(demo));
+      } catch {}
+      return demo;
     }
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    memoryBudgets = parsed;
+    return parsed;
   } catch (error) {
-    console.error('Error loading budgets:', error);
-    return DEFAULT_BUDGETS;
+    console.warn('AsyncStorage fallback for budgets:', error);
+    if (!memoryBudgets) {
+      memoryBudgets = DEFAULT_BUDGETS;
+    }
+    return memoryBudgets;
   }
 }
 
 export async function saveBudgets(budgets: Budget[]): Promise<void> {
+  memoryBudgets = budgets;
   try {
     await AsyncStorage.setItem(STORAGE_KEY_BUDGETS, JSON.stringify(budgets));
   } catch (error) {
-    console.error('Error saving budgets:', error);
+    console.warn('AsyncStorage save fallback for budgets:', error);
   }
 }
 
 export async function resetStorageToDemo(): Promise<{ transactions: Transaction[]; budgets: Budget[] }> {
   const transactions = generateDemoTransactions();
   const budgets = DEFAULT_BUDGETS;
-  await AsyncStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(transactions));
-  await AsyncStorage.setItem(STORAGE_KEY_BUDGETS, JSON.stringify(budgets));
+  memoryTransactions = transactions;
+  memoryBudgets = budgets;
+  try {
+    await AsyncStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(transactions));
+    await AsyncStorage.setItem(STORAGE_KEY_BUDGETS, JSON.stringify(budgets));
+  } catch {}
   return { transactions, budgets };
 }
