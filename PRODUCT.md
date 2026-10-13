@@ -12,4 +12,4 @@ Mobile users seeking a private, zero-bloat, high-craft personal budgeting and ex
 3. **Real-Time Financial Metrics**: Dynamic savings rate percentage, daily spending average, cash-flow ratio bar, and category ranking leaderboards.
 4. **Proactive Budget Guardrails**: Monthly category spending caps with visual amber/coral warning thresholds and remaining balance alerts.
 5. **Frictionless Entry**: Large tabular amount entry sheet, category icon chips, payment method tags, and instant calculation.
-6. **Zero-Baseline Privacy**: Starts at a clean 0 balance with local offline storage, in-memory fallbacks, and one-tap reset.
+6. **Zero-Baseline Privacy**: Starts at a clean 0 FCFA balance with local offline storage, in-memory fallbacks, and one-tap reset.

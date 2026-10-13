@@ -14,7 +14,7 @@
 
 ### 2. 💳 Gestion Complète des Transactions
 - Ajout ultra-rapide de transactions (Dépense / Revenu).
-- Saisie du montant en grands chiffres lisibles avec devise (€).
+- Saisie du montant en grands chiffres lisibles avec devise (FCFA).
 - Attribution par **catégorie** (Alimentation, Transports, Logement, Loisirs, Santé, Salaire, Freelance, etc.) avec icônes et codes couleurs harmonisés.
 - Moyen de paiement (Carte bancaire, Apple Pay, Espèces, Virement).
 - Suppression facile avec boîte de confirmation.

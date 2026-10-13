@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useFinance } from '@/context/FinanceContext';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors, { Palette } from '@/constants/Colors';
-import { formatCurrency } from '@/utils/dateUtils';
+import { formatCurrency, formatCompact } from '@/utils/dateUtils';
 
 export function FinanceChart() {
   const theme = useColorScheme();
@@ -94,7 +94,7 @@ export function FinanceChart() {
                 ]}
                 numberOfLines={1}
               >
-                {point.expense > 0 ? `${Math.round(point.expense)}€` : '-'}
+                {point.expense > 0 ? formatCompact(point.expense) : '-'}
               </Text>
             </Pressable>
           );

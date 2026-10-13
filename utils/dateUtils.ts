@@ -202,14 +202,32 @@ export function shiftDate(date: Date, timeFrame: TimeFrame, direction: 1 | -1): 
   return res;
 }
 
+export const CURRENCY_LABEL = 'FCFA';
+
 /**
- * Format currency in EUR with tabular digits
+ * Group digits with spaces (French style), no decimals: 1250000 -> "1 250 000".
+ * Implemented manually so the output is identical on Hermes, iOS, Android and web.
+ */
+export function formatAmount(amount: number): string {
+  const rounded = Math.round(Math.abs(amount));
+  return rounded.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+}
+
+/**
+ * Format currency in FCFA (XOF/XAF, no decimals): -1500 -> "-1 500 FCFA"
  */
 export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
+  const sign = Math.round(amount) < 0 ? '-' : '';
+  return `${sign}${formatAmount(amount)} ${CURRENCY_LABEL}`;
+}
+
+/**
+ * Compact format for tight spaces (chart labels): 1500 -> "1,5k", 2500000 -> "2,5M"
+ */
+export function formatCompact(amount: number): string {
+  const abs = Math.abs(amount);
+  const fmt = (n: number) => (Math.round(n * 10) / 10).toString().replace('.', ',');
+  if (abs >= 1_000_000) return `${fmt(abs / 1_000_000)}M`;
+  if (abs >= 1_000) return `${fmt(abs / 1_000)}k`;
+  return `${Math.round(abs)}`;
 }

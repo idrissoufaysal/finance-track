@@ -55,7 +55,7 @@ export default function BudgetsScreen() {
   const handleClearAll = () => {
     Alert.alert(
       "Remettre à zéro",
-      "Voulez-vous supprimer toutes les transactions et repartir d'une base vierge (0 opération, 0,00 €) ?",
+      "Voulez-vous supprimer toutes les transactions et repartir d'une base vierge (0 opération, 0 FCFA) ?",
       [
         { text: "Annuler", style: "cancel" },
         {

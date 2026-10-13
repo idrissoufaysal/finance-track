@@ -133,7 +133,7 @@ The palette is anchored by deep emerald greens symbolizing financial vitality, p
 - **Card Subheadings & Headers**: 15px-16px / 700 (Bold).
 - **Body Text**: 14px / 400-500 (Regular/Medium), 1.45 line-height.
 - **Labels, Dates & Footers**: 11px-12px / 600 (Semibold), uppercase or muted slate.
-- **Rule**: All currency values (`€`) must use `fontVariant: ["tabular-nums"]`.
+- **Rule**: All currency values (`FCFA`) must use `fontVariant: ["tabular-nums"]`.
 
 ## Layout
 
@@ -171,7 +171,7 @@ The palette is anchored by deep emerald greens symbolizing financial vitality, p
 ## Do's and Don'ts
 
 - **DO** always support instantaneous Light/Dark theme switching without page reloads.
-- **DO** format all numbers with French locale formatting (`1 250,00 €`) and signed prefixes (`+` for income, `-` for expense).
+- **DO** format all numbers with French locale formatting (`1 250 000 FCFA`, no decimals) and signed prefixes (`+` for income, `-` for expense).
 - **DO** provide clear empty states when zero transactions exist, offering a quick action to add an expense or income.
 - **DON'T** use harsh pure blacks (`#000000`) or generic default blues; use Forest Obsidian (`#090d16`, `#131b2e`).
 - **DON'T** jitter layout when numbers change; always use tabular numerals.

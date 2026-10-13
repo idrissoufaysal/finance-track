@@ -4,20 +4,20 @@ import { toISODate } from '@/utils/dateUtils';
 
 // v2 storage keys starting completely clean with 0 transactions
 const STORAGE_KEY_TRANSACTIONS = '@finance_track_transactions_v2';
-const STORAGE_KEY_BUDGETS = '@finance_track_budgets_v2';
+const STORAGE_KEY_BUDGETS = '@finance_track_budgets_v3_fcfa';
 
 let memoryTransactions: Transaction[] | null = [];
 let memoryBudgets: Budget[] | null = null;
 
 export const DEFAULT_BUDGETS: Budget[] = [
-  { categoryId: 'food', monthlyLimit: 450 },
-  { categoryId: 'housing', monthlyLimit: 950 },
-  { categoryId: 'transport', monthlyLimit: 120 },
-  { categoryId: 'shopping', monthlyLimit: 200 },
-  { categoryId: 'entertainment', monthlyLimit: 150 },
-  { categoryId: 'health', monthlyLimit: 100 },
-  { categoryId: 'bills', monthlyLimit: 120 },
-  { categoryId: 'other_expense', monthlyLimit: 150 },
+  { categoryId: 'food', monthlyLimit: 100000 },
+  { categoryId: 'housing', monthlyLimit: 250000 },
+  { categoryId: 'transport', monthlyLimit: 30000 },
+  { categoryId: 'shopping', monthlyLimit: 50000 },
+  { categoryId: 'entertainment', monthlyLimit: 30000 },
+  { categoryId: 'health', monthlyLimit: 25000 },
+  { categoryId: 'bills', monthlyLimit: 30000 },
+  { categoryId: 'other_expense', monthlyLimit: 30000 },
 ];
 
 /**
@@ -129,12 +129,12 @@ export function generateDemoTransactions(): Transaction[] {
     });
   };
 
-  addTx(0, '08:45', 'Café & Croissant', 3.80, 'expense', 'food', 'apple_pay');
-  addTx(0, '12:30', 'Déjeuner brasserie', 18.50, 'expense', 'food', 'card');
-  addTx(1, '19:40', 'Courses alimentation', 74.30, 'expense', 'food', 'card');
-  addTx(2, '10:00', 'Virement Freelance', 480.00, 'income', 'freelance', 'transfer');
-  addTx(8, '07:30', 'Salaire Net', 2950.00, 'income', 'salary', 'transfer');
-  addTx(8, '10:00', 'Loyer appartement', 890.00, 'expense', 'housing', 'transfer');
+  addTx(0, '08:45', 'Café & Croissant', 1500, 'expense', 'food', 'apple_pay');
+  addTx(0, '12:30', 'Déjeuner brasserie', 5000, 'expense', 'food', 'card');
+  addTx(1, '19:40', 'Courses alimentation', 25000, 'expense', 'food', 'card');
+  addTx(2, '10:00', 'Virement Freelance', 150000, 'income', 'freelance', 'transfer');
+  addTx(8, '07:30', 'Salaire Net', 350000, 'income', 'salary', 'transfer');
+  addTx(8, '10:00', 'Loyer appartement', 150000, 'expense', 'housing', 'transfer');
 
   return txs;
 }

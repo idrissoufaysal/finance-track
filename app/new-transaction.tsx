@@ -18,7 +18,7 @@ import {
   EXPENSE_CATEGORIES,
   INCOME_CATEGORIES,
 } from "@/constants/categories";
-import { toISODate } from "@/utils/dateUtils";
+import { toISODate, formatAmount, CURRENCY_LABEL } from "@/utils/dateUtils";
 import { TransactionType, PaymentMethod } from "@/types/finance";
 
 export default function NewTransactionScreen() {
@@ -43,13 +43,12 @@ export default function NewTransactionScreen() {
     : availableCategories[0].id;
 
   const handleAddQuickAmount = (val: number) => {
-    const current = parseFloat(amountStr.replace(",", ".")) || 0;
-    const next = current + val;
-    setAmountStr(next.toFixed(2).replace(".00", "").replace(".", ","));
+    const current = parseInt(amountStr.replace(/\D/g, ""), 10) || 0;
+    setAmountStr(formatAmount(current + val));
   };
 
   const handleSave = async () => {
-    const cleanAmount = parseFloat(amountStr.replace(",", "."));
+    const cleanAmount = parseInt(amountStr.replace(/\D/g, ""), 10);
     if (isNaN(cleanAmount) || cleanAmount <= 0) {
       Alert.alert("Montant invalide", "Veuillez saisir un montant positif valide.");
       return;
@@ -88,7 +87,7 @@ export default function NewTransactionScreen() {
     { key: "transfer", label: "Virement", icon: "swap-horizontal-outline" },
   ];
 
-  const quickPills = [5, 10, 20, 50, 100];
+  const quickPills = [500, 1000, 2000, 5000, 10000];
 
   return (
     <KeyboardAvoidingView
@@ -172,11 +171,14 @@ export default function NewTransactionScreen() {
           </Text>
           <View style={styles.amountRow}>
             <TextInput
-              placeholder="0,00"
+              placeholder="0"
               placeholderTextColor={colors.textMuted}
-              keyboardType="decimal-pad"
+              keyboardType="number-pad"
               value={amountStr}
-              onChangeText={setAmountStr}
+              onChangeText={(t) => {
+                const digits = t.replace(/\D/g, "");
+                setAmountStr(digits ? formatAmount(parseInt(digits, 10)) : "");
+              }}
               style={[
                 styles.amountInput,
                 {
@@ -192,7 +194,7 @@ export default function NewTransactionScreen() {
                 { color: type === "expense" ? colors.expense : colors.income },
               ]}
             >
-              €
+              {CURRENCY_LABEL}
             </Text>
           </View>
 
@@ -212,7 +214,7 @@ export default function NewTransactionScreen() {
                 ]}
               >
                 <Text style={[styles.quickPillText, { color: colors.text }]}>
-                  +{val} €
+                  +{formatAmount(val)}
                 </Text>
               </Pressable>
             ))}
@@ -432,13 +434,13 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   amountInput: {
-    fontSize: 44,
+    fontSize: 40,
     fontWeight: "800",
     textAlign: "center",
     minWidth: 120,
   },
   currencySymbol: {
-    fontSize: 32,
+    fontSize: 20,
     fontWeight: "700",
     marginLeft: 4,
   },
