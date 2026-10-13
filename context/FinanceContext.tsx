@@ -12,7 +12,9 @@ import {
   saveTransactions,
   loadBudgets,
   saveBudgets,
+  clearAllTransactions,
   resetStorageToDemo,
+  DEFAULT_BUDGETS,
 } from '@/services/storage';
 import {
   isDateInPeriod,
@@ -21,9 +23,8 @@ import {
   shiftDate,
   startOfWeek,
   toISODate,
-  parseISODate,
 } from '@/utils/dateUtils';
-import { getCategoryById, EXPENSE_CATEGORIES } from '@/constants/categories';
+import { getCategoryById } from '@/constants/categories';
 
 interface FinanceContextType {
   transactions: Transaction[];
@@ -50,6 +51,7 @@ interface FinanceContextType {
   updateTransaction: (tx: Transaction) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
   updateBudget: (categoryId: string, monthlyLimit: number) => Promise<void>;
+  clearAllData: () => Promise<void>;
   resetToDemo: () => Promise<void>;
 }
 
@@ -62,7 +64,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [timeFrame, setTimeFrame] = useState<TimeFrame>('day');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
-  // Load initial data
+  // Load initial data (starts with 0 transactions)
   useEffect(() => {
     async function init() {
       setIsLoading(true);
@@ -75,6 +77,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         setBudgets(loadedBudgets);
       } catch (e) {
         console.error('Failed to init finance context:', e);
+        setTransactions([]);
+        setBudgets(DEFAULT_BUDGETS);
       } finally {
         setIsLoading(false);
       }
@@ -108,7 +112,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     return transactions
       .filter((tx) => isDateInPeriod(tx.date, timeFrame, selectedDate))
       .sort((a, b) => {
-        // Sort descending: latest date/time first
         if (a.date !== b.date) {
           return b.date.localeCompare(a.date);
         }
@@ -176,7 +179,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     const todayStr = toISODate(new Date());
 
     if (timeFrame === 'day') {
-      // For Day: show 7 days surrounding the selected day
       const center = new Date(selectedDate);
       const points: DailyPoint[] = [];
       const labels = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
@@ -207,7 +209,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (timeFrame === 'week') {
-      // 7 days of the selected week: Monday to Sunday
       const monday = startOfWeek(selectedDate);
       const daysLabels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
       const points: DailyPoint[] = [];
@@ -238,15 +239,12 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (timeFrame === 'month') {
-      // 4-5 weeks of the month
       const points: DailyPoint[] = [];
       const year = selectedDate.getFullYear();
       const month = selectedDate.getMonth();
-      const firstDay = new Date(year, month, 1);
       const lastDay = new Date(year, month + 1, 0);
       const daysInMonth = lastDay.getDate();
 
-      // Chunk month into 4 quarters
       const chunks = [
         { label: 'Sem 1', start: 1, end: 7 },
         { label: 'Sem 2', start: 8, end: 14 },
@@ -332,6 +330,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     [budgets]
   );
 
+  const clearAllData = useCallback(async (): Promise<void> => {
+    await clearAllTransactions();
+    setTransactions([]);
+  }, []);
+
   const resetToDemo = useCallback(async (): Promise<void> => {
     const res = await resetStorageToDemo();
     setTransactions(res.transactions);
@@ -361,6 +364,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         updateTransaction,
         deleteTransaction,
         updateBudget,
+        clearAllData,
         resetToDemo,
       }}
     >

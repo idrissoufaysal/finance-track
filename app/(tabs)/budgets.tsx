@@ -18,7 +18,7 @@ import { formatCurrency } from '@/utils/dateUtils';
 export default function BudgetsScreen() {
   const theme = useColorScheme();
   const colors = Colors[theme];
-  const { budgets, transactions, resetToDemo } = useFinance();
+  const { budgets, transactions, clearAllData, resetToDemo } = useFinance();
 
   // Calculate monthly spent for each budget in current month
   const now = new Date();
@@ -54,20 +54,42 @@ export default function BudgetsScreen() {
 
   const globalPercentage = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
 
-  const handleResetDemo = () => {
+  const handleClearAll = () => {
     Alert.alert(
-      'Réinitialiser les données',
-      'Voulez-vous recharger les données financières de démonstration ?',
+      'Remettre à zéro',
+      'Voulez-vous supprimer toutes les transactions et repartir d\'une base vierge ?',
       [
         { text: 'Annuler', style: 'cancel' },
         {
-          text: 'Réinitialiser',
+          text: 'Vider (0 transaction)',
           style: 'destructive',
           onPress: async () => {
-            await resetToDemo();
-            Alert.alert('Succès', 'Données de démonstration rechargées !');
+            await clearAllData();
+            Alert.alert('Succès', 'Toutes les données ont été remises à 0.');
           },
         },
+      ]
+    );
+  };
+
+  const handleOptions = () => {
+    Alert.alert(
+      'Gestion des données',
+      'Que souhaitez-vous faire ?',
+      [
+        {
+          text: 'Remettre à zéro (Vierge)',
+          style: 'destructive',
+          onPress: handleClearAll,
+        },
+        {
+          text: 'Charger données de démonstration',
+          onPress: async () => {
+            await resetToDemo();
+            Alert.alert('Succès', 'Données de démonstration chargées.');
+          },
+        },
+        { text: 'Annuler', style: 'cancel' },
       ]
     );
   };
@@ -78,18 +100,18 @@ export default function BudgetsScreen() {
         <View>
           <Text style={[styles.headerTitle, { color: colors.text }]}>Plafonds de Budget</Text>
           <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-            Suivi mensuel par catégorie
+            Suivi mensuel par catégorie ({transactions.length} opération{transactions.length > 1 ? 's' : ''})
           </Text>
         </View>
 
         <Pressable
-          onPress={handleResetDemo}
+          onPress={handleOptions}
           style={({ pressed }) => [
             styles.resetBtn,
             { backgroundColor: colors.surfaceSecondary, opacity: pressed ? 0.7 : 1 },
           ]}
         >
-          <Ionicons name="refresh" size={16} color={colors.textSecondary} />
+          <Ionicons name="trash-outline" size={18} color={colors.expense} />
         </Pressable>
       </View>
 
@@ -292,9 +314,9 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   resetBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
   },
