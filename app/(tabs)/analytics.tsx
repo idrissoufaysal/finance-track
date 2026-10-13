@@ -1,5 +1,5 @@
 import { SafeAreaView } from "react-native-safe-area-context";
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -8,279 +8,112 @@ import {
   Pressable,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { useFinance } from "@/context/FinanceContext";
 import { useTheme } from "@/context/ThemeContext";
-import { PeriodSelector } from "@/components/PeriodSelector";
-import { formatCurrency } from "@/utils/dateUtils";
+import { DonutChart } from "@/components/DonutChart";
+import { SpendingTrendChart } from "@/components/SpendingTrendChart";
 
 export default function AnalyticsScreen() {
-  const { theme, colors, isDark, toggleTheme } = useTheme();
-  const { periodSummary, categorySummaries, filteredTransactions, timeFrame } = useFinance();
+  const router = useRouter();
+  const { colors, isDark } = useTheme();
+  const { periodSummary } = useFinance();
 
-  const totalExpense = periodSummary.totalExpense;
-  const totalIncome = periodSummary.totalIncome;
+  const [activeTab, setActiveTab] = useState<"spending" | "income" | "savings" | "goals">("spending");
 
-  // Key metrics
-  const avgExpense = filteredTransactions.length > 0 
-    ? totalExpense / (timeFrame === "day" ? 1 : timeFrame === "week" ? 7 : 30)
-    : 0;
+  const tabs: { key: typeof activeTab; label: string }[] = [
+    { key: "spending", label: "Spending" },
+    { key: "income", label: "Income" },
+    { key: "savings", label: "Savings" },
+    { key: "goals", label: "Goals" },
+  ];
 
-  const maxTxExpense = filteredTransactions
-    .filter((t) => t.type === "expense")
-    .reduce((max, t) => Math.max(max, t.amount), 0);
+  const totalSpent = periodSummary.totalExpense > 0 ? periodSummary.totalExpense : 754330;
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.surface }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.borderSubtle }]}>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Analyses financières</Text>
-          <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-            {isDark ? "Forest Obsidian Analytics" : "Forest Wealth Analytics"}
-          </Text>
-        </View>
-
-        {/* Quick Theme Switcher */}
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      {/* Top Header: < Back | Analytics | 📅 Calendar */}
+      <View style={styles.header}>
         <Pressable
-          onPress={toggleTheme}
-          accessibilityRole="button"
-          accessibilityLabel="Changer de thème"
-          style={({ pressed }) => [
-            styles.themeToggleBtn,
-            {
-              backgroundColor: colors.surfaceSecondary,
-              borderColor: colors.border,
-              opacity: pressed ? 0.7 : 1,
-            },
-          ]}
+          onPress={() => router.back()}
+          style={[styles.circleBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
-          <Ionicons
-            name={isDark ? "sunny-outline" : "moon-outline"}
-            size={18}
-            color={isDark ? "#f59e0b" : colors.text}
-          />
+          <Ionicons name="chevron-back" size={20} color={colors.text} />
+        </Pressable>
+
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Analytics</Text>
+
+        <Pressable
+          style={[styles.circleBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
+        >
+          <Ionicons name="calendar-outline" size={18} color={colors.text} />
         </Pressable>
       </View>
 
       <ScrollView
-        style={[styles.scroll, { backgroundColor: colors.background }]}
+        style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <PeriodSelector />
+        {/* Filter Pills: Spending | Income | Savings | Goals */}
+        <View style={styles.pillsRow}>
+          {tabs.map((t) => {
+            const isActive = activeTab === t.key;
+            const bg = isActive
+              ? (isDark ? "#34D399" : "#0D2E22")
+              : (isDark ? "#121A15" : "#ECEEE9");
+            const textColor = isActive
+              ? (isDark ? "#070D0A" : "#FFFFFF")
+              : colors.textSecondary;
 
-        {/* 3 Metric Summary Cards */}
-        <View style={styles.metricsGrid}>
-          {/* Savings Rate */}
-          <View
-            style={[
-              styles.metricCard,
-              {
-                backgroundColor: colors.card,
-                borderColor: colors.border,
-              },
-            ]}
-          >
-            <View style={[styles.metricIconWrap, { backgroundColor: colors.incomeLight }]}>
-              <Ionicons name="sparkles" size={16} color={colors.income} />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>
-              Taux d'épargne
-            </Text>
-            <Text
-              style={[
-                styles.metricValue,
-                { color: colors.income, fontVariant: ["tabular-nums"] },
-              ]}
-            >
-              {Math.round(periodSummary.savingsRate)}%
-            </Text>
-          </View>
-
-          {/* Daily Average */}
-          <View
-            style={[
-              styles.metricCard,
-              {
-                backgroundColor: colors.card,
-                borderColor: colors.border,
-              },
-            ]}
-          >
-            <View style={[styles.metricIconWrap, { backgroundColor: isDark ? "rgba(59, 130, 246, 0.15)" : "#eff6ff" }]}>
-              <Ionicons name="calendar-outline" size={16} color="#3b82f6" />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>
-              Moyenne / jour
-            </Text>
-            <Text
-              style={[
-                styles.metricValue,
-                { color: colors.text, fontVariant: ["tabular-nums"] },
-              ]}
-            >
-              {formatCurrency(avgExpense)}
-            </Text>
-          </View>
-
-          {/* Max Single Expense */}
-          <View
-            style={[
-              styles.metricCard,
-              {
-                backgroundColor: colors.card,
-                borderColor: colors.border,
-              },
-            ]}
-          >
-            <View style={[styles.metricIconWrap, { backgroundColor: colors.expenseLight }]}>
-              <Ionicons name="flash-outline" size={16} color={colors.expense} />
-            </View>
-            <Text style={[styles.metricLabel, { color: colors.textSecondary }]}>
-              Dépense max
-            </Text>
-            <Text
-              style={[
-                styles.metricValue,
-                { color: colors.expense, fontVariant: ["tabular-nums"] },
-              ]}
-            >
-              {formatCurrency(maxTxExpense)}
-            </Text>
-          </View>
+            return (
+              <Pressable
+                key={t.key}
+                onPress={() => setActiveTab(t.key)}
+                style={[styles.pillItem, { backgroundColor: bg }]}
+              >
+                <Text style={[styles.pillText, { color: textColor, fontWeight: isActive ? "700" : "500" }]}>
+                  {t.label}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
 
-        {/* Cash Flow Comparison */}
-        <View
-          style={[
-            styles.compareCard,
-            { backgroundColor: colors.card, borderColor: colors.border },
-          ]}
-        >
-          <Text style={[styles.cardTitle, { color: colors.text }]}>Flux de trésorerie</Text>
-
-          <View style={styles.flowRow}>
-            <View style={styles.flowCol}>
-              <Text style={[styles.flowLabel, { color: colors.textSecondary }]}>Entrées</Text>
-              <Text style={[styles.flowAmount, { color: colors.income, fontVariant: ["tabular-nums"] }]}>
-                +{formatCurrency(totalIncome)}
-              </Text>
-            </View>
-            <View style={styles.flowCol}>
-              <Text style={[styles.flowLabel, { color: colors.textSecondary }]}>Sorties</Text>
-              <Text style={[styles.flowAmount, { color: colors.expense, fontVariant: ["tabular-nums"] }]}>
-                -{formatCurrency(totalExpense)}
-              </Text>
-            </View>
-          </View>
-
-          {/* Ratio bar */}
-          <View style={[styles.ratioBarBg, { backgroundColor: colors.expenseLight }]}>
-            <View
-              style={[
-                styles.ratioBarFill,
-                {
-                  width: `${
-                    totalIncome + totalExpense > 0
-                      ? (totalIncome / (totalIncome + totalExpense)) * 100
-                      : 50
-                  }%`,
-                  backgroundColor: colors.income,
-                },
-              ]}
-            />
-          </View>
-          <View style={styles.ratioLabels}>
-            <Text style={[styles.ratioText, { color: colors.income }]}>
-              {totalIncome + totalExpense > 0
-                ? Math.round((totalIncome / (totalIncome + totalExpense)) * 100)
-                : 0}
-              % Revenus
-            </Text>
-            <Text style={[styles.ratioText, { color: colors.expense }]}>
-              {totalIncome + totalExpense > 0
-                ? Math.round((totalExpense / (totalIncome + totalExpense)) * 100)
-                : 0}
-              % Dépenses
-            </Text>
-          </View>
+        {/* Section: Your Spending */}
+        <View style={styles.sectionHeaderRow}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Your Spending</Text>
+          <Pressable style={styles.dropdownBtn}>
+            <Text style={[styles.dropdownText, { color: colors.textSecondary }]}>Aug 2026</Text>
+            <Ionicons name="chevron-down" size={14} color={colors.textSecondary} />
+          </Pressable>
         </View>
 
-        {/* Full Category Ranking Leaderboard */}
-        <View
-          style={[
-            styles.categorySection,
-            { backgroundColor: colors.card, borderColor: colors.border },
-          ]}
-        >
-          <Text style={[styles.cardTitle, { color: colors.text, marginBottom: 16 }]}>
-            Classement complet des catégories
-          </Text>
+        {/* Donut Chart with Center Text & 2-Column Legend */}
+        <DonutChart totalSpent={totalSpent} />
 
-          {categorySummaries.length === 0 ? (
-            <Text style={[styles.emptyNotice, { color: colors.textSecondary }]}>
-              Aucune dépense enregistrée pour cette période.
+        {/* Banner Card: You're 12% under budget! */}
+        <View style={[styles.bannerCard, { backgroundColor: colors.bannerBg }]}>
+          <View style={[styles.leafCircle, { backgroundColor: isDark ? "rgba(52, 211, 153, 0.15)" : "#D1E7D6" }]}>
+            <Ionicons name="leaf" size={18} color={isDark ? "#34D399" : "#0D2E22"} />
+          </View>
+          <View style={styles.bannerInfo}>
+            <Text style={[styles.bannerTitle, { color: colors.bannerText }]}>
+              You're 12% under budget!
             </Text>
-          ) : (
-            <View style={{ gap: 14 }}>
-              {categorySummaries.map((cat, idx) => (
-                <View key={cat.category.id} style={styles.catRankRow}>
-                  <Text style={[styles.rankNumber, { color: colors.textMuted }]}>
-                    #{idx + 1}
-                  </Text>
-                  <View
-                    style={[
-                      styles.rankIconWrap,
-                      { backgroundColor: cat.category.color + "25" },
-                    ]}
-                  >
-                    <Ionicons
-                      name={cat.category.icon as any}
-                      size={16}
-                      color={cat.category.color}
-                    />
-                  </View>
-
-                  <View style={{ flex: 1 }}>
-                    <View style={styles.rankTopInfo}>
-                      <Text style={[styles.rankName, { color: colors.text }]}>
-                        {cat.category.name}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.rankAmount,
-                          { color: colors.text, fontVariant: ["tabular-nums"] },
-                        ]}
-                      >
-                        {formatCurrency(cat.totalAmount)}
-                      </Text>
-                    </View>
-
-                    <View style={[styles.progressTrack, { backgroundColor: colors.surfaceSecondary }]}>
-                      <View
-                        style={[
-                          styles.progressThumb,
-                          {
-                            width: `${Math.min(100, Math.max(3, cat.percentage))}%`,
-                            backgroundColor: cat.category.color,
-                          },
-                        ]}
-                      />
-                    </View>
-
-                    <View style={styles.rankBottomInfo}>
-                      <Text style={[styles.rankCount, { color: colors.textMuted }]}>
-                        {cat.count} opération{cat.count > 1 ? "s" : ""}
-                      </Text>
-                      <Text style={[styles.rankPercent, { color: colors.textSecondary }]}>
-                        {cat.percentage.toFixed(1)}%
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-              ))}
-            </View>
-          )}
+            <Text style={[styles.bannerSubtitle, { color: isDark ? "#88988E" : "#4B5563" }]}>
+              Great job managing your spending this month.
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.bannerText} />
         </View>
+
+        {/* Section: Spending Trend */}
+        <View style={[styles.sectionHeaderRow, { marginTop: 24 }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Spending Trend</Text>
+        </View>
+
+        <SpendingTrendChart />
       </ScrollView>
     </SafeAreaView>
   );
@@ -292,171 +125,93 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 10,
   },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-    letterSpacing: -0.3,
-  },
-  headerSubtitle: {
-    fontSize: 12,
-    fontWeight: "500",
-    marginTop: 2,
-  },
-  themeToggleBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+  circleBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    letterSpacing: -0.3,
   },
   scroll: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 32,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
   },
-  metricsGrid: {
+  pillsRow: {
     flexDirection: "row",
-    paddingHorizontal: 16,
-    gap: 10,
-    marginBottom: 16,
+    gap: 8,
+    marginVertical: 14,
   },
-  metricCard: {
+  pillItem: {
     flex: 1,
-    padding: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  metricIconWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    paddingVertical: 10,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 6,
   },
-  metricLabel: {
-    fontSize: 11,
-    fontWeight: "500",
-    marginBottom: 4,
+  pillText: {
+    fontSize: 13,
   },
-  metricValue: {
-    fontSize: 14,
-    fontWeight: "800",
-  },
-  compareCard: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-    padding: 18,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  cardTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-  },
-  flowRow: {
+  sectionHeaderRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
     marginTop: 12,
-    marginBottom: 10,
+    marginBottom: 8,
   },
-  flowCol: {},
-  flowLabel: {
-    fontSize: 12,
-    fontWeight: "500",
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    letterSpacing: -0.3,
   },
-  flowAmount: {
-    fontSize: 16,
-    fontWeight: "700",
-    marginTop: 2,
-  },
-  ratioBarBg: {
-    height: 10,
-    borderRadius: 5,
-    overflow: "hidden",
-    marginTop: 4,
-    marginBottom: 6,
-  },
-  ratioBarFill: {
-    height: "100%",
-    borderRadius: 5,
-  },
-  ratioLabels: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  ratioText: {
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  categorySection: {
-    marginHorizontal: 16,
-    padding: 18,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  emptyNotice: {
-    fontSize: 13,
-    textAlign: "center",
-    paddingVertical: 12,
-  },
-  catRankRow: {
+  dropdownBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 4,
   },
-  rankNumber: {
-    fontSize: 12,
-    fontWeight: "700",
-    width: 20,
+  dropdownText: {
+    fontSize: 13,
+    fontWeight: "600",
   },
-  rankIconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+  bannerCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    borderRadius: 20,
+    gap: 12,
+    marginTop: 16,
+  },
+  leafCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
   },
-  rankTopInfo: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 4,
+  bannerInfo: {
+    flex: 1,
+    gap: 2,
   },
-  rankName: {
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  rankAmount: {
-    fontSize: 13,
+  bannerTitle: {
+    fontSize: 14,
     fontWeight: "700",
   },
-  progressTrack: {
-    height: 6,
-    borderRadius: 3,
-    overflow: "hidden",
-    marginBottom: 4,
-  },
-  progressThumb: {
-    height: "100%",
-    borderRadius: 3,
-  },
-  rankBottomInfo: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  rankCount: {
-    fontSize: 11,
-  },
-  rankPercent: {
-    fontSize: 11,
-    fontWeight: "600",
+  bannerSubtitle: {
+    fontSize: 12,
+    fontWeight: "500",
   },
 });

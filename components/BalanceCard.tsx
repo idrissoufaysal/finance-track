@@ -1,97 +1,62 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useFinance } from '@/context/FinanceContext';
-import { useColorScheme } from '@/components/useColorScheme';
-import Colors, { Palette } from '@/constants/Colors';
-import { formatCurrency } from '@/utils/dateUtils';
+import React, { useState } from "react";
+import { View, Text, StyleSheet, Pressable } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useFinance } from "@/context/FinanceContext";
+import { useTheme } from "@/context/ThemeContext";
+import Colors, { Palette } from "@/constants/Colors";
+import { formatCurrency } from "@/utils/dateUtils";
 
 export function BalanceCard() {
-  const theme = useColorScheme();
-  const colors = Colors[theme];
-  const { periodSummary, timeFrame } = useFinance();
+  const { colors, isDark } = useTheme();
+  const { periodSummary } = useFinance();
+  const [isBalanceHidden, setIsBalanceHidden] = useState(false);
 
-  const isPositive = periodSummary.netBalance >= 0;
-
-  const labelPeriod = 
-    timeFrame === 'day' ? 'du jour' : timeFrame === 'week' ? 'de la semaine' : 'du mois';
+  const displayBalance = isBalanceHidden
+    ? "••••••••"
+    : formatCurrency(periodSummary.netBalance);
 
   return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: colors.card,
-          borderColor: colors.border,
-          shadowColor: '#000',
-        },
-      ]}
-    >
+    <View style={styles.card}>
+      {/* Top Row: Indicator + Total Balance + Eye + Signal Icon */}
       <View style={styles.topRow}>
-        <Text style={[styles.title, { color: colors.textSecondary }]}>
-          Solde net {labelPeriod}
-        </Text>
-        {periodSummary.savingsRate > 0 && (
-          <View style={[styles.badge, { backgroundColor: colors.incomeLight }]}>
-            <Ionicons name="sparkles" size={12} color={colors.income} />
-            <Text style={[styles.badgeText, { color: colors.income }]}>
-              {Math.round(periodSummary.savingsRate)}% épargné
-            </Text>
-          </View>
-        )}
-      </View>
-
-      <Text
-        style={[
-          styles.balanceAmount,
-          {
-            color: isPositive ? colors.text : colors.expense,
-            fontVariant: ['tabular-nums'],
-          },
-        ]}
-      >
-        {isPositive ? '+' : ''}
-        {formatCurrency(periodSummary.netBalance)}
-      </Text>
-
-      {/* Row for Incomes & Expenses */}
-      <View style={[styles.statsRow, { borderTopColor: colors.borderSubtle }]}>
-        {/* Incomes */}
-        <View style={styles.statBox}>
-          <View style={[styles.iconCircle, { backgroundColor: colors.incomeLight }]}>
-            <Ionicons name="arrow-down" size={14} color={colors.income} />
-          </View>
-          <View>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Revenus</Text>
-            <Text
-              style={[
-                styles.statAmount,
-                { color: colors.income, fontVariant: ['tabular-nums'] },
-              ]}
-            >
-              +{formatCurrency(periodSummary.totalIncome)}
-            </Text>
-          </View>
+        <View style={styles.topLeft}>
+          <View style={styles.statusDot} />
+          <Text style={styles.label}>Total Balance</Text>
+          <Pressable
+            onPress={() => setIsBalanceHidden(!isBalanceHidden)}
+            hitSlop={8}
+            style={styles.eyeBtn}
+          >
+            <Ionicons
+              name={isBalanceHidden ? "eye-off-outline" : "eye-outline"}
+              size={18}
+              color="#A7F3D0"
+            />
+          </Pressable>
         </View>
 
-        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+        {/* Right signal / chart icon */}
+        <View style={styles.signalIcon}>
+          <Ionicons name="stats-chart" size={16} color="#34D399" />
+        </View>
+      </View>
 
-        {/* Expenses */}
-        <View style={styles.statBox}>
-          <View style={[styles.iconCircle, { backgroundColor: colors.expenseLight }]}>
-            <Ionicons name="arrow-up" size={14} color={colors.expense} />
+      {/* Main Row: Big Balance + Percentage Pill */}
+      <View style={styles.mainRow}>
+        <Text
+          style={[styles.balanceText, { fontVariant: ["tabular-nums"] }]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+        >
+          {displayBalance}
+        </Text>
+
+        <View style={styles.badgeColumn}>
+          <View style={styles.pillBadge}>
+            <Ionicons name="caret-up" size={12} color="#34D399" />
+            <Text style={styles.pillText}>12.6%</Text>
           </View>
-          <View>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Dépenses</Text>
-            <Text
-              style={[
-                styles.statAmount,
-                { color: colors.expense, fontVariant: ['tabular-nums'] },
-              ]}
-            >
-              -{formatCurrency(periodSummary.totalExpense)}
-            </Text>
-          </View>
+          <Text style={styles.pillSubtext}>vs last month</Text>
         </View>
       </View>
     </View>
@@ -101,76 +66,90 @@ export function BalanceCard() {
 const styles = StyleSheet.create({
   card: {
     marginHorizontal: 16,
-    borderRadius: 20,
-    padding: 20,
+    marginTop: 8,
+    backgroundColor: Palette.pineCard,
+    borderRadius: 24,
+    padding: 22,
     borderWidth: 1,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
+    borderColor: Palette.pineBorder,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 4,
   },
   topRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  title: {
-    fontSize: 13,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
-    gap: 4,
-  },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  balanceAmount: {
-    fontSize: 32,
-    fontWeight: '800',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
+  },
+  topLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Palette.mintElectric,
+    shadowColor: Palette.mintElectric,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+  },
+  label: {
+    color: "#E2E8F0",
+    fontSize: 14,
+    fontWeight: "600",
+    letterSpacing: -0.2,
+  },
+  eyeBtn: {
+    padding: 2,
+  },
+  signalIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(52, 211, 153, 0.12)",
+  },
+  mainRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+    gap: 12,
+  },
+  balanceText: {
+    fontSize: 32,
+    fontWeight: "800",
+    color: "#FFFFFF",
     letterSpacing: -0.5,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 16,
-    borderTopWidth: 1,
-  },
-  statBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
     flex: 1,
   },
-  iconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+  badgeColumn: {
+    alignItems: "flex-end",
   },
-  statLabel: {
+  pillBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(52, 211, 153, 0.18)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 3,
+  },
+  pillText: {
+    color: Palette.mintElectric,
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: "700",
   },
-  statAmount: {
-    fontSize: 15,
-    fontWeight: '700',
-    marginTop: 1,
-  },
-  divider: {
-    width: 1,
-    height: 32,
-    marginHorizontal: 8,
+  pillSubtext: {
+    color: "rgba(255, 255, 255, 0.6)",
+    fontSize: 10,
+    fontWeight: "500",
+    marginTop: 3,
   },
 });

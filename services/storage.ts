@@ -1,152 +1,244 @@
+import * as SQLite from 'expo-sqlite';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Transaction, Budget } from '@/types/finance';
-import { toISODate } from '@/utils/dateUtils';
+import { Transaction, Budget, PaymentMethod, TransactionType } from '@/types/finance';
+import { DEFAULT_BUDGETS, generateDemoTransactions } from './storageShared';
 
-// v2 storage keys starting completely clean with 0 transactions
-const STORAGE_KEY_TRANSACTIONS = '@finance_track_transactions_v2';
-const STORAGE_KEY_BUDGETS = '@finance_track_budgets_v3_fcfa';
-
-let memoryTransactions: Transaction[] | null = [];
-let memoryBudgets: Budget[] | null = null;
-
-export const DEFAULT_BUDGETS: Budget[] = [
-  { categoryId: 'food', monthlyLimit: 100000 },
-  { categoryId: 'housing', monthlyLimit: 250000 },
-  { categoryId: 'transport', monthlyLimit: 30000 },
-  { categoryId: 'shopping', monthlyLimit: 50000 },
-  { categoryId: 'entertainment', monthlyLimit: 30000 },
-  { categoryId: 'health', monthlyLimit: 25000 },
-  { categoryId: 'bills', monthlyLimit: 30000 },
-  { categoryId: 'other_expense', monthlyLimit: 30000 },
-];
+export { DEFAULT_BUDGETS, generateDemoTransactions } from './storageShared';
 
 /**
- * Loads transactions from storage. Starts with 0 transactions (empty array) by default.
+ * Native storage (Android / iOS) backed by SQLite.
+ * The database file lives on the device, so the app works fully offline.
+ * Web uses `storage.web.ts` (AsyncStorage) with the same exported API.
  */
-export async function loadTransactions(): Promise<Transaction[]> {
-  try {
-    // Clear old v1 demo keys if present
-    try {
-      await AsyncStorage.removeItem('@finance_track_transactions_v1');
-    } catch {}
 
-    const raw = await AsyncStorage.getItem(STORAGE_KEY_TRANSACTIONS);
-    if (!raw) {
-      // Initial state: 0 transactions
-      memoryTransactions = [];
-      await AsyncStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify([]));
-      return [];
-    }
+const DATABASE_NAME = 'finance-track.db';
+const DATABASE_VERSION = 1;
+
+// Legacy AsyncStorage keys, imported once into SQLite during the first migration.
+const LEGACY_KEY_TRANSACTIONS = '@finance_track_transactions_v2';
+const LEGACY_KEY_BUDGETS = '@finance_track_budgets_v2';
+
+type TransactionRow = {
+  id: string;
+  title: string;
+  amount: number;
+  type: string;
+  category_id: string;
+  date: string;
+  time: string;
+  note: string | null;
+  payment_method: string | null;
+  created_at: number;
+};
+
+type BudgetRow = {
+  category_id: string;
+  monthly_limit: number;
+};
+
+let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
+
+function getDb(): Promise<SQLite.SQLiteDatabase> {
+  if (!dbPromise) {
+    dbPromise = (async () => {
+      const db = await SQLite.openDatabaseAsync(DATABASE_NAME);
+      await migrate(db);
+      return db;
+    })().catch((error) => {
+      dbPromise = null; // allow a retry on next call
+      throw error;
+    });
+  }
+  return dbPromise;
+}
+
+async function migrate(db: SQLite.SQLiteDatabase): Promise<void> {
+  await db.execAsync('PRAGMA journal_mode = WAL');
+
+  const row = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
+  let currentVersion = row?.user_version ?? 0;
+  if (currentVersion >= DATABASE_VERSION) return;
+
+  if (currentVersion === 0) {
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS transactions (
+        id TEXT PRIMARY KEY NOT NULL,
+        title TEXT NOT NULL,
+        amount REAL NOT NULL,
+        type TEXT NOT NULL CHECK (type IN ('expense', 'income')),
+        category_id TEXT NOT NULL,
+        date TEXT NOT NULL,
+        time TEXT NOT NULL,
+        note TEXT,
+        payment_method TEXT,
+        created_at INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions (date);
+      CREATE TABLE IF NOT EXISTS budgets (
+        category_id TEXT PRIMARY KEY NOT NULL,
+        monthly_limit REAL NOT NULL
+      );
+    `);
+
+    // Import any data previously saved with AsyncStorage, otherwise seed default budgets.
+    const [legacyTxRaw, legacyBudgetRaw] = await Promise.all([
+      AsyncStorage.getItem(LEGACY_KEY_TRANSACTIONS).catch(() => null),
+      AsyncStorage.getItem(LEGACY_KEY_BUDGETS).catch(() => null),
+    ]);
+    const legacyTxs = safeParseArray<Transaction>(legacyTxRaw);
+    const legacyBudgets = safeParseArray<Budget>(legacyBudgetRaw);
+    const budgetsToInsert = legacyBudgets.length > 0 ? legacyBudgets : DEFAULT_BUDGETS;
+
+    await db.withTransactionAsync(async () => {
+      for (const tx of legacyTxs) {
+        await insertTransactionRow(db, tx, 'OR IGNORE');
+      }
+      for (const b of budgetsToInsert) {
+        await db.runAsync(
+          'INSERT OR IGNORE INTO budgets (category_id, monthly_limit) VALUES (?, ?)',
+          b.categoryId,
+          b.monthlyLimit
+        );
+      }
+    });
+
+    currentVersion = 1;
+  }
+
+  // Future migrations: if (currentVersion === 1) { ... currentVersion = 2; }
+
+  await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);
+}
+
+function safeParseArray<T>(raw: string | null): T[] {
+  if (!raw) return [];
+  try {
     const parsed = JSON.parse(raw);
-    memoryTransactions = Array.isArray(parsed) ? parsed : [];
-    return memoryTransactions;
-  } catch (error) {
-    console.warn('Storage read fallback for transactions:', error);
-    if (!memoryTransactions) {
-      memoryTransactions = [];
-    }
-    return memoryTransactions;
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
   }
 }
 
-export async function saveTransactions(transactions: Transaction[]): Promise<void> {
-  memoryTransactions = transactions;
-  try {
-    await AsyncStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(transactions));
-  } catch (error) {
-    console.warn('Storage save error:', error);
-  }
+function rowToTransaction(row: TransactionRow): Transaction {
+  return {
+    id: row.id,
+    title: row.title,
+    amount: row.amount,
+    type: row.type as TransactionType,
+    categoryId: row.category_id,
+    date: row.date,
+    time: row.time,
+    note: row.note ?? undefined,
+    paymentMethod: (row.payment_method ?? undefined) as PaymentMethod | undefined,
+    createdAt: row.created_at,
+  };
+}
+
+async function insertTransactionRow(
+  db: SQLite.SQLiteDatabase,
+  tx: Transaction,
+  conflict: 'OR IGNORE' | 'OR REPLACE' | '' = ''
+): Promise<void> {
+  await db.runAsync(
+    `INSERT ${conflict} INTO transactions
+      (id, title, amount, type, category_id, date, time, note, payment_method, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    tx.id,
+    tx.title,
+    tx.amount,
+    tx.type,
+    tx.categoryId,
+    tx.date,
+    tx.time ?? '',
+    tx.note ?? null,
+    tx.paymentMethod ?? null,
+    tx.createdAt ?? Date.now()
+  );
+}
+
+/* ------------------------------ Transactions ------------------------------ */
+
+export async function loadTransactions(): Promise<Transaction[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<TransactionRow>(
+    'SELECT * FROM transactions ORDER BY date DESC, time DESC, created_at DESC'
+  );
+  return rows.map(rowToTransaction);
+}
+
+export async function insertTransaction(tx: Transaction): Promise<void> {
+  const db = await getDb();
+  await insertTransactionRow(db, tx);
+}
+
+export async function updateTransactionRecord(tx: Transaction): Promise<void> {
+  const db = await getDb();
+  await db.runAsync(
+    `UPDATE transactions
+       SET title = ?, amount = ?, type = ?, category_id = ?, date = ?, time = ?,
+           note = ?, payment_method = ?
+     WHERE id = ?`,
+    tx.title,
+    tx.amount,
+    tx.type,
+    tx.categoryId,
+    tx.date,
+    tx.time ?? '',
+    tx.note ?? null,
+    tx.paymentMethod ?? null,
+    tx.id
+  );
+}
+
+export async function deleteTransactionRecord(id: string): Promise<void> {
+  const db = await getDb();
+  await db.runAsync('DELETE FROM transactions WHERE id = ?', id);
 }
 
 export async function clearAllTransactions(): Promise<Transaction[]> {
-  memoryTransactions = [];
-  try {
-    await AsyncStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify([]));
-    await AsyncStorage.removeItem('@finance_track_transactions_v1');
-  } catch {}
+  const db = await getDb();
+  await db.runAsync('DELETE FROM transactions');
   return [];
 }
 
+/* --------------------------------- Budgets -------------------------------- */
+
 export async function loadBudgets(): Promise<Budget[]> {
-  try {
-    const raw = await AsyncStorage.getItem(STORAGE_KEY_BUDGETS);
-    if (!raw) {
-      memoryBudgets = DEFAULT_BUDGETS;
-      await AsyncStorage.setItem(STORAGE_KEY_BUDGETS, JSON.stringify(DEFAULT_BUDGETS));
-      return DEFAULT_BUDGETS;
-    }
-    const parsed = JSON.parse(raw);
-    memoryBudgets = Array.isArray(parsed) ? parsed : DEFAULT_BUDGETS;
-    return memoryBudgets;
-  } catch (error) {
-    console.warn('Storage read fallback for budgets:', error);
-    if (!memoryBudgets) {
-      memoryBudgets = DEFAULT_BUDGETS;
-    }
-    return memoryBudgets;
-  }
+  const db = await getDb();
+  const rows = await db.getAllAsync<BudgetRow>('SELECT * FROM budgets');
+  return rows.map((r) => ({ categoryId: r.category_id, monthlyLimit: r.monthly_limit }));
 }
 
-export async function saveBudgets(budgets: Budget[]): Promise<void> {
-  memoryBudgets = budgets;
-  try {
-    await AsyncStorage.setItem(STORAGE_KEY_BUDGETS, JSON.stringify(budgets));
-  } catch (error) {
-    console.warn('Storage save budgets error:', error);
-  }
+export async function upsertBudget(categoryId: string, monthlyLimit: number): Promise<void> {
+  const db = await getDb();
+  await db.runAsync(
+    `INSERT INTO budgets (category_id, monthly_limit) VALUES (?, ?)
+     ON CONFLICT(category_id) DO UPDATE SET monthly_limit = excluded.monthly_limit`,
+    categoryId,
+    monthlyLimit
+  );
 }
 
-/**
- * Optional demo generator if the user explicitly wants sample data in the future
- */
-export function generateDemoTransactions(): Transaction[] {
-  const now = new Date();
-  const txs: Transaction[] = [];
-
-  const addTx = (
-    daysOffset: number,
-    time: string,
-    title: string,
-    amount: number,
-    type: 'expense' | 'income',
-    categoryId: string,
-    paymentMethod: 'card' | 'cash' | 'transfer' | 'apple_pay' = 'card',
-    note?: string
-  ) => {
-    const d = new Date(now);
-    d.setDate(d.getDate() - daysOffset);
-    txs.push({
-      id: `seed_${daysOffset}_${time.replace(':', '')}_${Math.random().toString(36).substring(2, 7)}`,
-      title,
-      amount,
-      type,
-      categoryId,
-      date: toISODate(d),
-      time,
-      paymentMethod,
-      note,
-      createdAt: d.getTime(),
-    });
-  };
-
-  addTx(0, '08:45', 'Café & Croissant', 1500, 'expense', 'food', 'apple_pay');
-  addTx(0, '12:30', 'Déjeuner brasserie', 5000, 'expense', 'food', 'card');
-  addTx(1, '19:40', 'Courses alimentation', 25000, 'expense', 'food', 'card');
-  addTx(2, '10:00', 'Virement Freelance', 150000, 'income', 'freelance', 'transfer');
-  addTx(8, '07:30', 'Salaire Net', 350000, 'income', 'salary', 'transfer');
-  addTx(8, '10:00', 'Loyer appartement', 150000, 'expense', 'housing', 'transfer');
-
-  return txs;
-}
+/* ---------------------------------- Demo ---------------------------------- */
 
 export async function resetStorageToDemo(): Promise<{ transactions: Transaction[]; budgets: Budget[] }> {
+  const db = await getDb();
   const transactions = generateDemoTransactions();
   const budgets = DEFAULT_BUDGETS;
-  memoryTransactions = transactions;
-  memoryBudgets = budgets;
-  try {
-    await AsyncStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(transactions));
-    await AsyncStorage.setItem(STORAGE_KEY_BUDGETS, JSON.stringify(budgets));
-  } catch {}
+  await db.withExclusiveTransactionAsync(async (txn) => {
+    await txn.runAsync('DELETE FROM transactions');
+    await txn.runAsync('DELETE FROM budgets');
+    for (const tx of transactions) {
+      await insertTransactionRow(txn, tx);
+    }
+    for (const b of budgets) {
+      await txn.runAsync(
+        'INSERT INTO budgets (category_id, monthly_limit) VALUES (?, ?)',
+        b.categoryId,
+        b.monthlyLimit
+      );
+    }
+  });
   return { transactions, budgets };
 }

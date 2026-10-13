@@ -9,9 +9,11 @@ import {
 } from '@/types/finance';
 import {
   loadTransactions,
-  saveTransactions,
+  insertTransaction,
+  updateTransactionRecord,
+  deleteTransactionRecord,
   loadBudgets,
-  saveBudgets,
+  upsertBudget,
   clearAllTransactions,
   resetStorageToDemo,
   DEFAULT_BUDGETS,
@@ -287,47 +289,43 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
         createdAt: Date.now(),
       };
-      const updated = [newTx, ...transactions];
-      setTransactions(updated);
-      await saveTransactions(updated);
+      setTransactions((prev) => [newTx, ...prev]);
+      await insertTransaction(newTx);
       return newTx;
     },
-    [transactions]
+    []
   );
 
   const updateTransaction = useCallback(
     async (tx: Transaction): Promise<void> => {
-      const updated = transactions.map((item) => (item.id === tx.id ? tx : item));
-      setTransactions(updated);
-      await saveTransactions(updated);
+      setTransactions((prev) => prev.map((item) => (item.id === tx.id ? tx : item)));
+      await updateTransactionRecord(tx);
     },
-    [transactions]
+    []
   );
 
   const deleteTransaction = useCallback(
     async (id: string): Promise<void> => {
-      const updated = transactions.filter((t) => t.id !== id);
-      setTransactions(updated);
-      await saveTransactions(updated);
+      setTransactions((prev) => prev.filter((t) => t.id !== id));
+      await deleteTransactionRecord(id);
     },
-    [transactions]
+    []
   );
 
   const updateBudget = useCallback(
     async (categoryId: string, monthlyLimit: number): Promise<void> => {
-      const existing = budgets.find((b) => b.categoryId === categoryId);
-      let updated: Budget[];
-      if (existing) {
-        updated = budgets.map((b) =>
-          b.categoryId === categoryId ? { ...b, monthlyLimit } : b
-        );
-      } else {
-        updated = [...budgets, { categoryId, monthlyLimit }];
-      }
-      setBudgets(updated);
-      await saveBudgets(updated);
+      setBudgets((prev) => {
+        const existing = prev.find((b) => b.categoryId === categoryId);
+        if (existing) {
+          return prev.map((b) =>
+            b.categoryId === categoryId ? { ...b, monthlyLimit } : b
+          );
+        }
+        return [...prev, { categoryId, monthlyLimit }];
+      });
+      await upsertBudget(categoryId, monthlyLimit);
     },
-    [budgets]
+    []
   );
 
   const clearAllData = useCallback(async (): Promise<void> => {
