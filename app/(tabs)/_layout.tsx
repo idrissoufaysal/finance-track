@@ -1,12 +1,10 @@
-import React from 'react';
-import { Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { useColorScheme } from '@/components/useColorScheme';
-import Colors from '@/constants/Colors';
+import React from "react";
+import { Tabs } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "@/context/ThemeContext";
 
 export default function TabLayout() {
-  const theme = useColorScheme();
-  const colors = Colors[theme];
+  const { theme, colors } = useTheme();
 
   return (
     <Tabs
@@ -16,9 +14,15 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.border,
-          height: 60,
+          borderTopWidth: 1,
+          height: 62,
           paddingBottom: 8,
           paddingTop: 6,
+          elevation: 8,
+          shadowColor: "#000",
+          shadowOpacity: theme === "dark" ? 0.3 : 0.05,
+          shadowRadius: 8,
+          shadowOffset: { width: 0, height: -2 },
         },
         headerStyle: {
           backgroundColor: colors.surface,
@@ -30,11 +34,11 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Accueil',
-          tabBarLabel: 'Tableau de bord',
+          title: "Accueil",
+          tabBarLabel: "Tableau de bord",
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
-              name={focused ? 'pie-chart' : 'pie-chart-outline'}
+              name={focused ? "pie-chart" : "pie-chart-outline"}
               size={22}
               color={color}
             />
@@ -44,11 +48,11 @@ export default function TabLayout() {
       <Tabs.Screen
         name="transactions"
         options={{
-          title: 'Transactions',
-          tabBarLabel: 'Historique',
+          title: "Transactions",
+          tabBarLabel: "Historique",
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
-              name={focused ? 'receipt' : 'receipt-outline'}
+              name={focused ? "receipt" : "receipt-outline"}
               size={22}
               color={color}
             />
@@ -58,11 +62,11 @@ export default function TabLayout() {
       <Tabs.Screen
         name="analytics"
         options={{
-          title: 'Analyses',
-          tabBarLabel: 'Statistiques',
+          title: "Analyses",
+          tabBarLabel: "Statistiques",
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
-              name={focused ? 'bar-chart' : 'bar-chart-outline'}
+              name={focused ? "bar-chart" : "bar-chart-outline"}
               size={22}
               color={color}
             />
@@ -72,11 +76,11 @@ export default function TabLayout() {
       <Tabs.Screen
         name="budgets"
         options={{
-          title: 'Budgets',
-          tabBarLabel: 'Budgets',
+          title: "Budgets",
+          tabBarLabel: "Budgets",
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
-              name={focused ? 'wallet' : 'wallet-outline'}
+              name={focused ? "wallet" : "wallet-outline"}
               size={22}
               color={color}
             />

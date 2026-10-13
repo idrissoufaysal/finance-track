@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -9,55 +9,59 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useFinance } from '@/context/FinanceContext';
-import { useColorScheme } from '@/components/useColorScheme';
-import Colors, { Palette } from '@/constants/Colors';
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { useFinance } from "@/context/FinanceContext";
+import { useTheme } from "@/context/ThemeContext";
 import {
   EXPENSE_CATEGORIES,
   INCOME_CATEGORIES,
-} from '@/constants/categories';
-import { toISODate } from '@/utils/dateUtils';
-import { TransactionType, PaymentMethod } from '@/types/finance';
+} from "@/constants/categories";
+import { toISODate } from "@/utils/dateUtils";
+import { TransactionType, PaymentMethod } from "@/types/finance";
 
 export default function NewTransactionScreen() {
   const router = useRouter();
-  const theme = useColorScheme();
-  const colors = Colors[theme];
+  const { theme, colors, isDark } = useTheme();
   const { addTransaction } = useFinance();
 
-  const [type, setType] = useState<TransactionType>('expense');
-  const [amountStr, setAmountStr] = useState('');
-  const [title, setTitle] = useState('');
-  const [categoryId, setCategoryId] = useState('food');
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card');
-  const [note, setNote] = useState('');
+  const [type, setType] = useState<TransactionType>("expense");
+  const [amountStr, setAmountStr] = useState("");
+  const [title, setTitle] = useState("");
+  const [categoryId, setCategoryId] = useState("food");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
+  const [note, setNote] = useState("");
 
   // Categories based on selected type
   const availableCategories =
-    type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
+    type === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
 
   // Make sure current category matches type
   const activeCategoryId = availableCategories.some((c) => c.id === categoryId)
     ? categoryId
     : availableCategories[0].id;
 
+  const handleAddQuickAmount = (val: number) => {
+    const current = parseFloat(amountStr.replace(",", ".")) || 0;
+    const next = current + val;
+    setAmountStr(next.toFixed(2).replace(".00", "").replace(".", ","));
+  };
+
   const handleSave = async () => {
-    const cleanAmount = parseFloat(amountStr.replace(',', '.'));
+    const cleanAmount = parseFloat(amountStr.replace(",", "."));
     if (isNaN(cleanAmount) || cleanAmount <= 0) {
-      Alert.alert('Montant invalide', 'Veuillez saisir un montant positif valide.');
+      Alert.alert("Montant invalide", "Veuillez saisir un montant positif valide.");
       return;
     }
 
     if (!title.trim()) {
-      Alert.alert('Titre manquant', 'Veuillez donner un libellé à cette opération.');
+      Alert.alert("Titre manquant", "Veuillez donner un libellé à cette opération.");
       return;
     }
 
     const now = new Date();
-    const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
     try {
       await addTransaction({
@@ -73,20 +77,22 @@ export default function NewTransactionScreen() {
 
       router.back();
     } catch (err) {
-      Alert.alert('Erreur', "Impossible d'enregistrer la transaction.");
+      Alert.alert("Erreur", "Impossible d'enregistrer la transaction.");
     }
   };
 
   const paymentMethods: { key: PaymentMethod; label: string; icon: string }[] = [
-    { key: 'card', label: 'Carte', icon: 'card-outline' },
-    { key: 'apple_pay', label: 'Apple Pay', icon: 'logo-apple' },
-    { key: 'cash', label: 'Espèces', icon: 'cash-outline' },
-    { key: 'transfer', label: 'Virement', icon: 'swap-horizontal-outline' },
+    { key: "card", label: "Carte", icon: "card-outline" },
+    { key: "apple_pay", label: "Apple Pay", icon: "logo-apple" },
+    { key: "cash", label: "Espèces", icon: "cash-outline" },
+    { key: "transfer", label: "Virement", icon: "swap-horizontal-outline" },
   ];
+
+  const quickPills = [5, 10, 20, 50, 100];
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
       style={{ flex: 1, backgroundColor: colors.background }}
     >
       <ScrollView
@@ -97,12 +103,12 @@ export default function NewTransactionScreen() {
         <View style={[styles.typeSwitcher, { backgroundColor: colors.surfaceSecondary }]}>
           <Pressable
             onPress={() => {
-              setType('expense');
-              setCategoryId('food');
+              setType("expense");
+              setCategoryId("food");
             }}
             style={[
               styles.typeBtn,
-              type === 'expense' && [
+              type === "expense" && [
                 styles.typeBtnActive,
                 { backgroundColor: colors.expense },
               ],
@@ -111,13 +117,13 @@ export default function NewTransactionScreen() {
             <Ionicons
               name="arrow-up-circle-outline"
               size={18}
-              color={type === 'expense' ? '#fff' : colors.textSecondary}
+              color={type === "expense" ? "#fff" : colors.textSecondary}
             />
             <Text
               style={[
                 styles.typeBtnText,
-                { color: type === 'expense' ? '#fff' : colors.textSecondary },
-                type === 'expense' && styles.typeBtnTextActive,
+                { color: type === "expense" ? "#fff" : colors.textSecondary },
+                type === "expense" && styles.typeBtnTextActive,
               ]}
             >
               Dépense
@@ -126,12 +132,12 @@ export default function NewTransactionScreen() {
 
           <Pressable
             onPress={() => {
-              setType('income');
-              setCategoryId('salary');
+              setType("income");
+              setCategoryId("salary");
             }}
             style={[
               styles.typeBtn,
-              type === 'income' && [
+              type === "income" && [
                 styles.typeBtnActive,
                 { backgroundColor: colors.income },
               ],
@@ -140,13 +146,13 @@ export default function NewTransactionScreen() {
             <Ionicons
               name="arrow-down-circle-outline"
               size={18}
-              color={type === 'income' ? '#fff' : colors.textSecondary}
+              color={type === "income" ? "#fff" : colors.textSecondary}
             />
             <Text
               style={[
                 styles.typeBtnText,
-                { color: type === 'income' ? '#fff' : colors.textSecondary },
-                type === 'income' && styles.typeBtnTextActive,
+                { color: type === "income" ? "#fff" : colors.textSecondary },
+                type === "income" && styles.typeBtnTextActive,
               ]}
             >
               Revenu
@@ -162,7 +168,7 @@ export default function NewTransactionScreen() {
           ]}
         >
           <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>
-            Montant de l\'opération
+            Montant de l'opération
           </Text>
           <View style={styles.amountRow}>
             <TextInput
@@ -174,8 +180,8 @@ export default function NewTransactionScreen() {
               style={[
                 styles.amountInput,
                 {
-                  color: type === 'expense' ? colors.expense : colors.income,
-                  fontVariant: ['tabular-nums'],
+                  color: type === "expense" ? colors.expense : colors.income,
+                  fontVariant: ["tabular-nums"],
                 },
               ]}
               autoFocus
@@ -183,11 +189,33 @@ export default function NewTransactionScreen() {
             <Text
               style={[
                 styles.currencySymbol,
-                { color: type === 'expense' ? colors.expense : colors.income },
+                { color: type === "expense" ? colors.expense : colors.income },
               ]}
             >
               €
             </Text>
+          </View>
+
+          {/* Quick Increment Pills */}
+          <View style={styles.quickPillsRow}>
+            {quickPills.map((val) => (
+              <Pressable
+                key={val}
+                onPress={() => handleAddQuickAmount(val)}
+                style={({ pressed }) => [
+                  styles.quickPill,
+                  {
+                    backgroundColor: colors.surfaceSecondary,
+                    borderColor: colors.border,
+                    opacity: pressed ? 0.7 : 1,
+                  },
+                ]}
+              >
+                <Text style={[styles.quickPillText, { color: colors.text }]}>
+                  +{val} €
+                </Text>
+              </Pressable>
+            ))}
           </View>
         </View>
 
@@ -231,29 +259,29 @@ export default function NewTransactionScreen() {
                     styles.catGridItem,
                     {
                       backgroundColor: isSelected
-                        ? cat.color + '25'
+                        ? cat.color + "25"
                         : colors.surfaceSecondary,
-                      borderColor: isSelected ? cat.color : 'transparent',
+                      borderColor: isSelected ? cat.color : "transparent",
                     },
                   ]}
                 >
                   <View
                     style={[
                       styles.catIconPill,
-                      { backgroundColor: isSelected ? cat.color : cat.color + '20' },
+                      { backgroundColor: isSelected ? cat.color : cat.color + "20" },
                     ]}
                   >
                     <Ionicons
                       name={cat.icon as any}
                       size={18}
-                      color={isSelected ? '#fff' : cat.color}
+                      color={isSelected ? "#fff" : cat.color}
                     />
                   </View>
                   <Text
                     style={[
                       styles.catGridName,
                       { color: isSelected ? colors.text : colors.textSecondary },
-                      isSelected && { fontWeight: '700' },
+                      isSelected && { fontWeight: "700" },
                     ]}
                     numberOfLines={1}
                   >
@@ -294,13 +322,13 @@ export default function NewTransactionScreen() {
                   <Ionicons
                     name={pm.icon as any}
                     size={14}
-                    color={isSelected ? '#fff' : colors.textSecondary}
+                    color={isSelected ? "#fff" : colors.textSecondary}
                   />
                   <Text
                     style={[
                       styles.paymentPillText,
-                      { color: isSelected ? '#fff' : colors.textSecondary },
-                      isSelected && { fontWeight: '700' },
+                      { color: isSelected ? "#fff" : colors.textSecondary },
+                      isSelected && { fontWeight: "700" },
                     ]}
                   >
                     {pm.label}
@@ -336,14 +364,14 @@ export default function NewTransactionScreen() {
           style={({ pressed }) => [
             styles.saveBtn,
             {
-              backgroundColor: type === 'expense' ? colors.expense : colors.income,
+              backgroundColor: type === "expense" ? colors.expense : colors.income,
               opacity: pressed ? 0.85 : 1,
             },
           ]}
         >
           <Ionicons name="checkmark-circle" size={20} color="#fff" />
           <Text style={styles.saveBtnText}>
-            Enregistrer {type === 'expense' ? 'la dépense' : 'le revenu'}
+            Enregistrer {type === "expense" ? "la dépense" : "le revenu"}
           </Text>
         </Pressable>
       </ScrollView>
@@ -354,63 +382,82 @@ export default function NewTransactionScreen() {
 const styles = StyleSheet.create({
   scrollContent: {
     padding: 16,
-    paddingBottom: 40,
-    gap: 16,
+    paddingBottom: 48,
+    gap: 14,
   },
   typeSwitcher: {
-    flexDirection: 'row',
+    flexDirection: "row",
     borderRadius: 14,
     padding: 4,
-    gap: 6,
+    gap: 4,
   },
   typeBtn: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 10,
     borderRadius: 10,
     gap: 6,
   },
   typeBtnActive: {
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
-    shadowRadius: 3,
+    shadowRadius: 4,
     elevation: 3,
   },
   typeBtnText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   typeBtnTextActive: {
-    fontWeight: '700',
+    fontWeight: "700",
   },
   amountCard: {
-    padding: 18,
+    padding: 20,
     borderRadius: 20,
     borderWidth: 1,
+    alignItems: "center",
   },
   inputLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    fontSize: 13,
+    fontWeight: "600",
     marginBottom: 8,
+    alignSelf: "flex-start",
   },
   amountRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "center",
+    marginVertical: 4,
   },
   amountInput: {
-    fontSize: 40,
-    fontWeight: '800',
-    flex: 1,
+    fontSize: 44,
+    fontWeight: "800",
+    textAlign: "center",
+    minWidth: 120,
   },
   currencySymbol: {
     fontSize: 32,
-    fontWeight: '700',
-    marginLeft: 8,
+    fontWeight: "700",
+    marginLeft: 4,
+  },
+  quickPillsRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 14,
+    flexWrap: "wrap",
+    justifyContent: "center",
+  },
+  quickPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  quickPillText: {
+    fontSize: 12,
+    fontWeight: "600",
   },
   inputCard: {
     padding: 16,
@@ -419,69 +466,65 @@ const styles = StyleSheet.create({
   },
   textInput: {
     fontSize: 15,
-    paddingVertical: 6,
+    paddingVertical: 4,
   },
   categoryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
-    marginTop: 6,
+    marginTop: 4,
   },
   catGridItem: {
-    width: '31%',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 4,
-    borderRadius: 12,
+    width: "48%",
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 10,
+    borderRadius: 14,
     borderWidth: 1.5,
+    gap: 8,
   },
   catIconPill: {
     width: 34,
     height: 34,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 6,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
   },
   catGridName: {
-    fontSize: 11,
-    textAlign: 'center',
+    fontSize: 13,
+    fontWeight: "500",
+    flex: 1,
   },
   paymentRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
     gap: 8,
-    marginTop: 6,
+    flexWrap: "wrap",
+    marginTop: 4,
   },
   paymentPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 16,
     gap: 6,
   },
   paymentPillText: {
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   saveBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 15,
-    borderRadius: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 8,
-    marginTop: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 4,
+    paddingVertical: 16,
+    borderRadius: 20,
+    marginTop: 8,
   },
   saveBtnText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
   },
 });
