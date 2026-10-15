@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,12 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+} from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -32,22 +38,21 @@ export default function NewTransactionScreen() {
   const [dateModalVisible, setDateModalVisible] = useState(false);
 
   const amountInputRef = useRef<TextInput>(null);
+  const [isAmountFocused, setIsAmountFocused] = useState(false);
+
+  const caretOpacity = useSharedValue(1);
+  const caretStyle = useAnimatedStyle(() => ({ opacity: caretOpacity.value }));
+
+  useEffect(() => {
+    if (isAmountFocused) {
+      // eslint-disable-next-line react-hooks/immutability
+      caretOpacity.value = withRepeat(withTiming(0.15, { duration: 600 }), -1, true);
+    } else {
+      caretOpacity.value = 1;
+    }
+  }, [isAmountFocused, caretOpacity]);
 
   const borderPrimary = colors.tint + "44";
-
-  const handleAddQuickAmount = (val: number) => {
-    setAmountValue((prev) => prev + val);
-  };
-
-  const handleRoundAmount = () => {
-    if (amountValue <= 0) {
-      setAmountValue(1000);
-      return;
-    }
-    const roundStep = amountValue >= 10000 ? 5000 : 1000;
-    const ceil = Math.ceil(amountValue / roundStep) * roundStep;
-    setAmountValue(ceil === amountValue ? amountValue + roundStep : ceil);
-  };
 
   const handleBackspace = () => {
     if (amountValue <= 0) {
@@ -100,7 +105,11 @@ export default function NewTransactionScreen() {
         time,
         note: isRecurring ? "Transaction récurrente" : undefined,
       });
-      router.back();
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace("/(tabs)");
+      }
     } catch {
       Alert.alert("Erreur", "Impossible d'enregistrer la transaction.");
     }
@@ -132,20 +141,16 @@ export default function NewTransactionScreen() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.keyboardContainer}
       >
-        {/* Poignée de glissement */}
-        <View style={styles.grabberWrapper}>
-          <View style={[styles.grabber, { backgroundColor: colors.border }]} />
-        </View>
-
-        {/* En-tête modal */}
+        {/* En-tête de page complète */}
         <View style={[styles.headerRow, { borderBottomColor: colors.borderSubtle }]}>
           <Pressable
-            onPress={() => router.back()}
-            style={({ pressed }) => [styles.headerCancelBtn, { opacity: pressed ? 0.7 : 1 }]}
+            onPress={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)"))}
+            style={({ pressed }) => [styles.headerBackBtn, { opacity: pressed ? 0.7 : 1 }]}
             hitSlop={12}
             accessibilityRole="button"
+            accessibilityLabel="Retour"
           >
-            <Text style={[styles.headerCancelText, { color: colors.textSecondary }]}>Annuler</Text>
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
           </Pressable>
 
           <Text style={[styles.headerTitle, { color: colors.text }]}>Nouvelle transaction</Text>
@@ -239,6 +244,11 @@ export default function NewTransactionScreen() {
                 >
                   {formatAmount(amountValue)}
                 </Text>
+                {isAmountFocused && (
+                  <Animated.View
+                    style={[styles.caret, { backgroundColor: colors.tint }, caretStyle]}
+                  />
+                )}
                 <Text style={[styles.amountCurrencySymbol, { color: colors.tint }]}>FCFA</Text>
               </Pressable>
 
@@ -246,6 +256,8 @@ export default function NewTransactionScreen() {
                 ref={amountInputRef}
                 value={amountValue === 0 ? "" : amountValue.toString()}
                 onChangeText={handleAmountInputChange}
+                onFocus={() => setIsAmountFocused(true)}
+                onBlur={() => setIsAmountFocused(false)}
                 keyboardType="number-pad"
                 style={styles.hiddenInput}
                 placeholder="0"
@@ -264,32 +276,6 @@ export default function NewTransactionScreen() {
                 hitSlop={8}
               >
                 <Ionicons name="backspace-outline" size={20} color={colors.textSecondary} />
-              </Pressable>
-            </View>
-
-            {/* Touches rapides d'incrément */}
-            <View style={[styles.quickPillsRow, { borderTopColor: colors.borderSubtle }]}>
-              {[1000, 5000, 10000].map((val) => (
-                <Pressable
-                  key={val}
-                  onPress={() => handleAddQuickAmount(val)}
-                  style={({ pressed }) => [
-                    styles.quickPill,
-                    { backgroundColor: colors.surfaceSecondary, borderColor: colors.borderSubtle, opacity: pressed ? 0.7 : 1 },
-                  ]}
-                >
-                  <Text style={[styles.quickPillText, { color: colors.text }]}>+{formatAmount(val)}</Text>
-                </Pressable>
-              ))}
-
-              <Pressable
-                onPress={handleRoundAmount}
-                style={({ pressed }) => [
-                  styles.quickPill,
-                  { backgroundColor: colors.tintSoft, borderColor: borderPrimary, opacity: pressed ? 0.7 : 1 },
-                ]}
-              >
-                <Text style={[styles.quickPillArrondirText, { color: colors.tint }]}>Arrondir</Text>
               </Pressable>
             </View>
           </View>
@@ -417,13 +403,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  headerCancelBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 4,
-  },
-  headerCancelText: {
-    fontSize: 15,
-    fontWeight: "500",
+  headerBackBtn: {
+    padding: 6,
+    borderRadius: 20,
   },
   headerTitle: {
     fontSize: 18,
@@ -553,28 +535,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  quickPillsRow: {
-    flexDirection: "row",
-    gap: 8,
-    paddingTop: 12,
-    marginTop: 6,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  quickPill: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 999,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  quickPillText: {
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  quickPillArrondirText: {
-    fontSize: 11,
-    fontWeight: "700",
+  caret: {
+    width: 2.5,
+    height: 32,
+    borderRadius: 2,
+    marginLeft: 2,
   },
   fieldSection: {
     gap: 8,
@@ -650,7 +615,7 @@ const styles = StyleSheet.create({
   bottomCtaBar: {
     paddingHorizontal: 16,
     paddingTop: 10,
-    paddingBottom: Platform.OS === "ios" ? 16 : 14,
+    paddingBottom: Platform.OS === "ios" ? 84 : 74,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   submitBtn: {

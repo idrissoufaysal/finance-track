@@ -1,14 +1,14 @@
-import { SafeAreaView } from "react-native-safe-area-context";
-import React, { useState, useMemo } from "react";
-import { View, Text, StyleSheet, ScrollView, TextInput, Pressable } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { useFinance } from "@/context/FinanceContext";
-import { useTheme } from "@/context/ThemeContext";
+import { EmptyState } from "@/components/EmptyState";
 import { PeriodSelector } from "@/components/PeriodSelector";
 import { TransactionItem } from "@/components/TransactionItem";
-import { EmptyState } from "@/components/EmptyState";
+import { useFinance } from "@/context/FinanceContext";
+import { useTheme } from "@/context/ThemeContext";
 import { formatCurrency } from "@/utils/dateUtils";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { useMemo, useState } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function TransactionsScreen() {
   const router = useRouter();

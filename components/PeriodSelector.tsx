@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/FinanceContext';
 import { useTheme } from '@/context/ThemeContext';
 import { TimeFrame } from '@/types/finance';
+import { MaskedTabBar } from '@/components/ui/masked-tab-bar';
 
 export function PeriodSelector() {
   const { colors, isDark } = useTheme();
@@ -26,7 +27,7 @@ export function PeriodSelector() {
 
   return (
     <View style={styles.container}>
-      {/* 4 Filtres : Aujourd'hui | Semaine | Mois | Année */}
+      {/* 4 Filtres : Aujourd'hui | Semaine | Mois | Année avec MaskedTabBar Reacticx */}
       <View
         style={[
           styles.segmentedWrapper,
@@ -36,39 +37,32 @@ export function PeriodSelector() {
           },
         ]}
       >
-        {options.map((opt) => {
-          const isActive = timeFrame === opt.key;
-          return (
-            <Pressable
-              key={opt.key}
-              onPress={() => setTimeFrame(opt.key)}
-              accessibilityRole="button"
-              style={[
-                styles.segmentItem,
-                isActive && [
-                  styles.segmentItemActive,
-                  {
-                    backgroundColor: colors.surface,
-                    borderColor: isDark ? colors.tint + "4D" : colors.border,
-                  },
-                ],
-              ]}
-            >
-              <Text
-                style={[
-                  styles.segmentLabel,
-                  {
-                    color: isActive ? colors.tint : colors.textSecondary,
-                    fontWeight: isActive ? "700" : "500",
-                  },
-                ]}
-                numberOfLines={1}
-              >
-                {opt.label}
-              </Text>
-            </Pressable>
-          );
-        })}
+        <MaskedTabBar
+          value={timeFrame}
+          onValueChange={(val) => setTimeFrame(val as TimeFrame)}
+          theme={isDark ? 'dark' : 'light'}
+          palette={{
+            track: 'transparent',
+            pill: isDark ? colors.surface : '#FFFFFF',
+            inactive: colors.textSecondary,
+            active: colors.tint,
+          }}
+          height={38}
+          radius={11}
+          padding={2}
+          gap={2}
+          fontSize={12}
+          fontWeight="700"
+          draggable={false}
+        >
+          <MaskedTabBar.List>
+            {options.map((opt) => (
+              <MaskedTabBar.Trigger key={opt.key} value={opt.key}>
+                <MaskedTabBar.Label>{opt.label}</MaskedTabBar.Label>
+              </MaskedTabBar.Trigger>
+            ))}
+          </MaskedTabBar.List>
+        </MaskedTabBar>
       </View>
 
       {/* Barre de navigation temporelle (< Libellé >) */}
@@ -135,28 +129,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   segmentedWrapper: {
-    flexDirection: 'row',
     borderRadius: 14,
     padding: 3,
     borderWidth: 1,
-  },
-  segmentItem: {
-    flex: 1,
-    paddingVertical: 7,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 11,
-  },
-  segmentItemActive: {
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  segmentLabel: {
-    fontSize: 12,
+    overflow: 'hidden',
   },
   navBar: {
     flexDirection: 'row',

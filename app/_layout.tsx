@@ -1,17 +1,17 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 import { Platform, StatusBar as RNStatusBar } from "react-native";
-import { StatusBar } from "expo-status-bar";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import "react-native-reanimated";
 
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { ThemeProvider, useTheme } from "@/context/ThemeContext";
-import { FinanceProvider } from "@/context/FinanceContext";
-import { ONBOARDING_STORAGE_KEY } from "@/services/storageShared";
 import { AnimatedSplashScreen } from "@/components/AnimatedSplashScreen";
+import { FinanceProvider } from "@/context/FinanceContext";
+import { ThemeProvider, useTheme } from "@/context/ThemeContext";
+import { ONBOARDING_STORAGE_KEY } from "@/services/storageShared";
 import { NavigationBar } from "expo-navigation-bar";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 export { ErrorBoundary } from "expo-router";
 
@@ -49,7 +49,7 @@ function RootNavigation() {
   useEffect(() => {
     AsyncStorage.getItem(ONBOARDING_STORAGE_KEY)
       .then((value) => setNeedsOnboarding(value !== "true"))
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setChecked(true));
   }, []);
 
@@ -90,7 +90,7 @@ function RootNavigation() {
         <Stack.Screen
           name="new-transaction"
           options={{
-            presentation: "modal",
+            presentation: "card",
             headerShown: false,
           }}
         />

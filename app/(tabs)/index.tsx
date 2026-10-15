@@ -30,18 +30,6 @@ export default function HomeScreen() {
 
         <View style={styles.headerRightBtns}>
           <Pressable
-            onPress={() => router.push("/(tabs)/transactions")}
-            accessibilityRole="button"
-            accessibilityLabel="Rechercher une opération"
-            style={[
-              styles.iconCircleBtn,
-              { backgroundColor: colors.surface, borderColor: colors.border },
-            ]}
-          >
-            <Ionicons name="search-outline" size={18} color={colors.text} />
-          </Pressable>
-
-          <Pressable
             onPress={toggleTheme}
             accessibilityRole="button"
             accessibilityLabel="Changer de thème"
