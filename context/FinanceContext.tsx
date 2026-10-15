@@ -278,6 +278,33 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       return points;
     }
 
+    if (timeFrame === 'year') {
+      const points: DailyPoint[] = [];
+      const year = selectedDate.getFullYear();
+      const monthNames = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+
+      for (let m = 0; m < 12; m++) {
+        const prefix = `${year}-${String(m + 1).padStart(2, '0')}`;
+        const monthTxs = transactions.filter((t) => t.date.startsWith(prefix));
+        let inc = 0;
+        let exp = 0;
+        for (const t of monthTxs) {
+          if (t.type === 'income') inc += t.amount;
+          else exp += t.amount;
+        }
+
+        points.push({
+          dayLabel: monthNames[m],
+          dateString: `${prefix}-01`,
+          income: inc,
+          expense: exp,
+          isToday: false,
+          isSelected: false,
+        });
+      }
+      return points;
+    }
+
     return [];
   }, [transactions, timeFrame, selectedDate]);
 

@@ -19,16 +19,16 @@ export default function OnboardingScreen() {
         </View>
 
         <Pressable onPress={() => router.replace("/(tabs)")} hitSlop={8}>
-          <Text style={styles.skipText}>Skip</Text>
+          <Text style={styles.skipText}>Passer</Text>
         </Pressable>
       </View>
 
       {/* Main Title & Subtitle */}
       <View style={styles.heroTextContainer}>
-        <Text style={styles.heroTitle}>Your Money</Text>
-        <Text style={styles.heroTitle}>Better Days</Text>
+        <Text style={styles.heroTitle}>Vos finances</Text>
+        <Text style={styles.heroTitle}>En toute sérénité</Text>
         <Text style={styles.heroSubtitle}>
-          Save, spend, and grow your wealth — all in one simple place.
+          Suivez vos dépenses, maîtrisez vos budgets et épargnez en FCFA.
         </Text>
       </View>
 
@@ -58,7 +58,7 @@ export default function OnboardingScreen() {
             { opacity: pressed ? 0.85 : 1 },
           ]}
         >
-          <Text style={styles.ctaText}>Get Started →</Text>
+          <Text style={styles.ctaText}>Commencer →</Text>
         </Pressable>
       </View>
     </SafeAreaView>

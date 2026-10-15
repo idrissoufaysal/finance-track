@@ -2,13 +2,11 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFinance } from '@/context/FinanceContext';
-import { useColorScheme } from '@/components/useColorScheme';
-import Colors, { Palette } from '@/constants/Colors';
+import { useTheme } from '@/context/ThemeContext';
 import { TimeFrame } from '@/types/finance';
 
 export function PeriodSelector() {
-  const theme = useColorScheme();
-  const colors = Colors[theme];
+  const { colors, isDark } = useTheme();
   const {
     timeFrame,
     setTimeFrame,
@@ -20,15 +18,24 @@ export function PeriodSelector() {
   } = useFinance();
 
   const options: { key: TimeFrame; label: string }[] = [
-    { key: 'day', label: 'Jour' },
+    { key: 'day', label: "Aujourd'hui" },
     { key: 'week', label: 'Semaine' },
     { key: 'month', label: 'Mois' },
+    { key: 'year', label: 'Année' },
   ];
 
   return (
     <View style={styles.container}>
-      {/* Segmented Control */}
-      <View style={[styles.segmentedWrapper, { backgroundColor: colors.surfaceSecondary }]}>
+      {/* 4 Filtres : Aujourd'hui | Semaine | Mois | Année */}
+      <View
+        style={[
+          styles.segmentedWrapper,
+          {
+            backgroundColor: colors.surfaceSecondary,
+            borderColor: colors.border,
+          },
+        ]}
+      >
         {options.map((opt) => {
           const isActive = timeFrame === opt.key;
           return (
@@ -39,16 +46,26 @@ export function PeriodSelector() {
                 styles.segmentItem,
                 isActive && [
                   styles.segmentItemActive,
-                  { backgroundColor: colors.surface, shadowColor: '#000' },
+                  {
+                    backgroundColor: isDark ? "#232C27" : "#FFFFFF",
+                    borderColor: isDark ? "rgba(52, 211, 153, 0.3)" : colors.border,
+                  },
                 ],
               ]}
             >
               <Text
                 style={[
                   styles.segmentLabel,
-                  { color: isActive ? colors.text : colors.textSecondary },
-                  isActive && styles.segmentLabelActive,
+                  {
+                    color: isActive
+                      ? isDark
+                        ? "#34D399"
+                        : "#059669"
+                      : colors.textSecondary,
+                    fontWeight: isActive ? "700" : "500",
+                  },
                 ]}
+                numberOfLines={1}
               >
                 {opt.label}
               </Text>
@@ -57,29 +74,32 @@ export function PeriodSelector() {
         })}
       </View>
 
-      {/* Date Navigation Bar */}
-      <View style={styles.navRow}>
+      {/* Barre de navigation temporelle (< Libellé >) */}
+      <View style={styles.navBar}>
         <Pressable
           onPress={goToPrevious}
           style={({ pressed }) => [
-            styles.arrowButton,
-            { backgroundColor: colors.surfaceSecondary, opacity: pressed ? 0.7 : 1 },
+            styles.navArrow,
+            {
+              backgroundColor: colors.surfaceSecondary,
+              borderColor: colors.border,
+              opacity: pressed ? 0.6 : 1,
+            },
           ]}
           hitSlop={8}
         >
-          <Ionicons name="chevron-back" size={20} color={colors.text} />
+          <Ionicons name="chevron-back" size={16} color={colors.text} />
         </Pressable>
 
-        <Pressable
-          onPress={goToToday}
-          style={styles.titleWrapper}
-        >
-          <Text style={[styles.periodTitleText, { color: colors.text }]} numberOfLines={1}>
+        <Pressable onPress={goToToday} style={styles.titleWrap}>
+          <Text style={[styles.periodTitleText, { color: colors.text }]}>
             {periodTitle}
           </Text>
           {!isCurrent && (
-            <View style={[styles.todayBadge, { backgroundColor: colors.tint + '20' }]}>
-              <Text style={[styles.todayBadgeText, { color: colors.tint }]}>Revenir</Text>
+            <View style={[styles.todayBadge, { backgroundColor: colors.tint + "20" }]}>
+              <Text style={[styles.todayBadgeText, { color: colors.tint }]}>
+                Aujourd'hui
+              </Text>
             </View>
           )}
         </Pressable>
@@ -87,12 +107,16 @@ export function PeriodSelector() {
         <Pressable
           onPress={goToNext}
           style={({ pressed }) => [
-            styles.arrowButton,
-            { backgroundColor: colors.surfaceSecondary, opacity: pressed ? 0.7 : 1 },
+            styles.navArrow,
+            {
+              backgroundColor: colors.surfaceSecondary,
+              borderColor: colors.border,
+              opacity: pressed ? 0.6 : 1,
+            },
           ]}
           hitSlop={8}
         >
-          <Ionicons name="chevron-forward" size={20} color={colors.text} />
+          <Ionicons name="chevron-forward" size={16} color={colors.text} />
         </Pressable>
       </View>
     </View>
@@ -102,67 +126,63 @@ export function PeriodSelector() {
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 12,
+    marginVertical: 4,
+    gap: 8,
   },
   segmentedWrapper: {
     flexDirection: 'row',
-    borderRadius: 12,
-    padding: 4,
+    borderRadius: 14,
+    padding: 3,
+    borderWidth: 1,
   },
   segmentItem: {
     flex: 1,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingVertical: 7,
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: 11,
   },
   segmentItemActive: {
+    borderWidth: 1,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowRadius: 3,
     elevation: 2,
   },
   segmentLabel: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 12,
   },
-  segmentLabelActive: {
-    fontWeight: '700',
-  },
-  navRow: {
+  navBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 12,
+    paddingHorizontal: 4,
   },
-  arrowButton: {
+  navArrow: {
     width: 36,
     height: 36,
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
   },
-  titleWrapper: {
+  titleWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: 8,
-    gap: 8,
+    gap: 6,
   },
   periodTitleText: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '600',
-    textAlign: 'center',
   },
   todayBadge: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 10,
+    borderRadius: 6,
   },
   todayBadgeText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
   },
 });

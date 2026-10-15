@@ -4,11 +4,12 @@ import Svg, { Circle, G } from "react-native-svg";
 import { useTheme } from "@/context/ThemeContext";
 import { formatCurrency } from "@/utils/dateUtils";
 
-interface CategorySlice {
+export interface CategorySlice {
   id: string;
   name: string;
   percentage: number;
   color: string;
+  amount?: number;
 }
 
 interface Props {
@@ -16,18 +17,10 @@ interface Props {
   slices?: CategorySlice[];
 }
 
-export function DonutChart({ totalSpent, slices }: Props) {
+export function DonutChart({ totalSpent, slices = [] }: Props) {
   const { colors, isDark } = useTheme();
 
-  // Default demo slices if no custom transactions exist, matching Stitch Screenshots 3 & 5 exactly
-  const data: CategorySlice[] = slices && slices.length > 0 ? slices : [
-    { id: "shopping", name: "Shopping", percentage: 32, color: isDark ? "#34D399" : "#0D2E22" },
-    { id: "entertainment", name: "Entertainment", percentage: 12, color: isDark ? "#A7F3D0" : "#84A98C" },
-    { id: "food", name: "Food & Drinks", percentage: 18, color: isDark ? "#10B981" : "#1B4332" },
-    { id: "bills", name: "Bills & Utilities", percentage: 10, color: isDark ? "#6EE7B7" : "#ADC178" },
-    { id: "transport", name: "Transport", percentage: 14, color: isDark ? "#059669" : "#52796F" },
-    { id: "others", name: "Others", percentage: 14, color: isDark ? "#D1FAE5" : "#D8F3DC" },
-  ];
+  const data: CategorySlice[] = slices.length > 0 ? slices : [];
 
   const size = 200;
   const strokeWidth = 26;
@@ -38,11 +31,22 @@ export function DonutChart({ totalSpent, slices }: Props) {
 
   return (
     <View style={styles.container}>
-      {/* Donut Ring with Center Text */}
+      {/* Anneau Donut avec Montant au centre */}
       <View style={styles.chartWrapper}>
         <Svg width={size} height={size}>
           <G rotation="-90" origin={`${size / 2}, ${size / 2}`}>
+            {/* Anneau de fond */}
+            <Circle
+              cx={size / 2}
+              cy={size / 2}
+              r={radius}
+              stroke={colors.borderSubtle}
+              strokeWidth={strokeWidth}
+              fill="transparent"
+            />
+
             {data.map((slice) => {
+              if (slice.percentage <= 0) return null;
               const strokeDasharray = `${(slice.percentage / 100) * circumference} ${circumference}`;
               const strokeDashoffset = -cumulativeAngle;
               cumulativeAngle += (slice.percentage / 100) * circumference;
@@ -65,7 +69,7 @@ export function DonutChart({ totalSpent, slices }: Props) {
           </G>
         </Svg>
 
-        {/* Center label */}
+        {/* Texte centré */}
         <View style={styles.centerContent} pointerEvents="none">
           <Text
             style={[styles.centerAmount, { color: colors.text, fontVariant: ["tabular-nums"] }]}
@@ -75,25 +79,31 @@ export function DonutChart({ totalSpent, slices }: Props) {
             {formatCurrency(totalSpent)}
           </Text>
           <Text style={[styles.centerSubtext, { color: colors.textSecondary }]}>
-            Total Spent
+            Total dépensé
           </Text>
         </View>
       </View>
 
-      {/* 2-Columns Category Breakdown List */}
-      <View style={styles.legendGrid}>
-        {data.map((item) => (
-          <View key={item.id} style={styles.legendCol}>
-            <View style={[styles.dot, { backgroundColor: item.color }]} />
-            <Text style={[styles.legendName, { color: colors.text }]} numberOfLines={1}>
-              {item.name}
-            </Text>
-            <Text style={[styles.legendPercent, { color: colors.text, fontVariant: ["tabular-nums"] }]}>
-              {Math.round(item.percentage)}%
-            </Text>
-          </View>
-        ))}
-      </View>
+      {/* Légende en 2 colonnes avec vraies catégories de la base de données */}
+      {data.length > 0 ? (
+        <View style={styles.legendGrid}>
+          {data.map((item) => (
+            <View key={item.id} style={styles.legendCol}>
+              <View style={[styles.dot, { backgroundColor: item.color }]} />
+              <Text style={[styles.legendName, { color: colors.text }]} numberOfLines={1}>
+                {item.name}
+              </Text>
+              <Text style={[styles.legendPercent, { color: colors.textSecondary, fontVariant: ["tabular-nums"] }]}>
+                {Math.round(item.percentage)}%
+              </Text>
+            </View>
+          ))}
+        </View>
+      ) : (
+        <Text style={[styles.emptyLegendText, { color: colors.textSecondary }]}>
+          Aucune dépense enregistrée sur cette période.
+        </Text>
+      )}
     </View>
   );
 }
@@ -104,11 +114,11 @@ const styles = StyleSheet.create({
     marginVertical: 12,
   },
   chartWrapper: {
+    position: "relative",
     width: 200,
     height: 200,
     alignItems: "center",
     justifyContent: "center",
-    position: "relative",
   },
   centerContent: {
     position: "absolute",
@@ -117,9 +127,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   centerAmount: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: "800",
-    letterSpacing: -0.5,
+    letterSpacing: -0.4,
     textAlign: "center",
   },
   centerSubtext: {
@@ -130,17 +140,16 @@ const styles = StyleSheet.create({
   legendGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "space-between",
-    width: "100%",
-    paddingHorizontal: 16,
     marginTop: 20,
-    rowGap: 14,
+    paddingHorizontal: 16,
+    rowGap: 12,
   },
   legendCol: {
-    width: "48%",
+    width: "50%",
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    paddingRight: 8,
   },
   dot: {
     width: 10,
@@ -149,11 +158,17 @@ const styles = StyleSheet.create({
   },
   legendName: {
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: "500",
     flex: 1,
   },
   legendPercent: {
     fontSize: 13,
     fontWeight: "700",
+  },
+  emptyLegendText: {
+    marginTop: 16,
+    fontSize: 13,
+    fontStyle: "italic",
+    textAlign: "center",
   },
 });

@@ -12,33 +12,33 @@ interface ActionItem {
 }
 
 export function QuickActions() {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const router = useRouter();
 
   const actions: ActionItem[] = [
     {
       id: "add",
-      label: "Add Money",
+      label: "Ajouter",
       icon: "add",
       onPress: () => router.push("/new-transaction"),
     },
     {
-      id: "send",
-      label: "Send",
-      icon: "paper-plane-outline",
-      onPress: () => router.push("/new-transaction"),
-    },
-    {
-      id: "convert",
-      label: "Convert",
-      icon: "swap-horizontal",
-      onPress: () => router.push("/(tabs)/transactions"),
-    },
-    {
-      id: "more",
-      label: "More",
-      icon: "ellipsis-horizontal",
+      id: "budgets",
+      label: "Budgets",
+      icon: "pie-chart-outline",
       onPress: () => router.push("/(tabs)/budgets"),
+    },
+    {
+      id: "analytics",
+      label: "Statistiques",
+      icon: "stats-chart-outline",
+      onPress: () => router.push("/(tabs)/analytics"),
+    },
+    {
+      id: "history",
+      label: "Historique",
+      icon: "list-outline",
+      onPress: () => router.push("/(tabs)/transactions"),
     },
   ];
 
@@ -76,8 +76,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    marginTop: 20,
-    marginBottom: 8,
+    marginTop: 18,
+    marginBottom: 6,
   },
   itemWrap: {
     alignItems: "center",
@@ -85,9 +85,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   squircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 22,
+    width: 58,
+    height: 58,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,

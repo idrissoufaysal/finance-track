@@ -1,5 +1,5 @@
 import { SafeAreaView } from "react-native-safe-area-context";
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -13,40 +13,67 @@ import { useFinance } from "@/context/FinanceContext";
 import { useTheme } from "@/context/ThemeContext";
 import { DonutChart } from "@/components/DonutChart";
 import { SpendingTrendChart } from "@/components/SpendingTrendChart";
+import { PeriodSelector } from "@/components/PeriodSelector";
+import { formatCurrency } from "@/utils/dateUtils";
 
 export default function AnalyticsScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
-  const { periodSummary } = useFinance();
+  const {
+    periodSummary,
+    categorySummaries,
+    chartPoints,
+    budgets,
+    periodTitle,
+  } = useFinance();
 
-  const [activeTab, setActiveTab] = useState<"spending" | "income" | "savings" | "goals">("spending");
+  const [activeTab, setActiveTab] = useState<"spending" | "income" | "savings">("spending");
 
   const tabs: { key: typeof activeTab; label: string }[] = [
-    { key: "spending", label: "Spending" },
-    { key: "income", label: "Income" },
-    { key: "savings", label: "Savings" },
-    { key: "goals", label: "Goals" },
+    { key: "spending", label: "Dépenses" },
+    { key: "income", label: "Revenus" },
+    { key: "savings", label: "Épargne" },
   ];
 
-  const totalSpent = periodSummary.totalExpense > 0 ? periodSummary.totalExpense : 754330;
+  // Tranches du donut chart dérivées de la base de données
+  const donutSlices = useMemo(() => {
+    return categorySummaries.map((cs) => ({
+      id: cs.category.id,
+      name: cs.category.name,
+      percentage: cs.percentage,
+      color: cs.category.color,
+      amount: cs.totalAmount,
+    }));
+  }, [categorySummaries]);
+
+  // Calcul du respect des budgets alloués
+  const totalBudgetLimit = useMemo(() => {
+    return budgets.reduce((acc, b) => acc + b.monthlyLimit, 0);
+  }, [budgets]);
+
+  const budgetUsagePercent =
+    totalBudgetLimit > 0
+      ? Math.round((periodSummary.totalExpense / totalBudgetLimit) * 100)
+      : 0;
+
+  const isUnderBudget = periodSummary.totalExpense <= totalBudgetLimit;
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      {/* Top Header: < Back | Analytics | 📅 Calendar */}
-      <View style={styles.header}>
-        <Pressable
-          onPress={() => router.back()}
-          style={[styles.circleBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
-        >
-          <Ionicons name="chevron-back" size={20} color={colors.text} />
-        </Pressable>
-
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Analytics</Text>
+      {/* En-tête : Titre Statistiques + Sélecteur de période */}
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.borderSubtle }]}>
+        <View>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Statistiques</Text>
+          <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
+            {periodTitle}
+          </Text>
+        </View>
 
         <Pressable
-          style={[styles.circleBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          onPress={() => router.push("/new-transaction")}
+          style={[styles.plusBtn, { backgroundColor: colors.tint }]}
         >
-          <Ionicons name="calendar-outline" size={18} color={colors.text} />
+          <Ionicons name="add" size={22} color="#fff" />
         </Pressable>
       </View>
 
@@ -55,15 +82,22 @@ export default function AnalyticsScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Filter Pills: Spending | Income | Savings | Goals */}
+        {/* Sélecteur de période (Jour / Semaine / Mois) */}
+        <PeriodSelector />
+
+        {/* Onglets Dépenses / Revenus / Épargne */}
         <View style={styles.pillsRow}>
           {tabs.map((t) => {
             const isActive = activeTab === t.key;
             const bg = isActive
-              ? (isDark ? "#34D399" : "#0D2E22")
-              : (isDark ? "#121A15" : "#ECEEE9");
+              ? isDark
+                ? "#34D399"
+                : "#059669"
+              : colors.surfaceSecondary;
             const textColor = isActive
-              ? (isDark ? "#070D0A" : "#FFFFFF")
+              ? isDark
+                ? "#070D0A"
+                : "#FFFFFF"
               : colors.textSecondary;
 
             return (
@@ -72,7 +106,12 @@ export default function AnalyticsScreen() {
                 onPress={() => setActiveTab(t.key)}
                 style={[styles.pillItem, { backgroundColor: bg }]}
               >
-                <Text style={[styles.pillText, { color: textColor, fontWeight: isActive ? "700" : "500" }]}>
+                <Text
+                  style={[
+                    styles.pillText,
+                    { color: textColor, fontWeight: isActive ? "700" : "500" },
+                  ]}
+                >
                   {t.label}
                 </Text>
               </Pressable>
@@ -80,40 +119,120 @@ export default function AnalyticsScreen() {
           })}
         </View>
 
-        {/* Section: Your Spending */}
-        <View style={styles.sectionHeaderRow}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Your Spending</Text>
-          <Pressable style={styles.dropdownBtn}>
-            <Text style={[styles.dropdownText, { color: colors.textSecondary }]}>Aug 2026</Text>
-            <Ionicons name="chevron-down" size={14} color={colors.textSecondary} />
-          </Pressable>
+        {/* Récapitulatif rapide selon l'onglet actif */}
+        <View style={[styles.summaryBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.summaryBoxLabel, { color: colors.textSecondary }]}>
+            {activeTab === "spending"
+              ? "Total des dépenses"
+              : activeTab === "income"
+              ? "Total des revenus"
+              : "Solde net d'épargne"}
+          </Text>
+          <Text
+            style={[
+              styles.summaryBoxValue,
+              {
+                color:
+                  activeTab === "spending"
+                    ? colors.expense
+                    : colors.income,
+                fontVariant: ["tabular-nums"],
+              },
+            ]}
+          >
+            {activeTab === "spending"
+              ? formatCurrency(periodSummary.totalExpense)
+              : activeTab === "income"
+              ? formatCurrency(periodSummary.totalIncome)
+              : formatCurrency(periodSummary.netBalance)}
+          </Text>
         </View>
 
-        {/* Donut Chart with Center Text & 2-Column Legend */}
-        <DonutChart totalSpent={totalSpent} />
+        {/* Graphique Donut par Catégorie */}
+        <View style={[styles.cardSection, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Répartition par catégorie
+          </Text>
+          <DonutChart
+            totalSpent={
+              activeTab === "spending"
+                ? periodSummary.totalExpense
+                : periodSummary.totalIncome
+            }
+            slices={donutSlices}
+          />
+        </View>
 
-        {/* Banner Card: You're 12% under budget! */}
-        <View style={[styles.bannerCard, { backgroundColor: colors.bannerBg }]}>
-          <View style={[styles.leafCircle, { backgroundColor: isDark ? "rgba(52, 211, 153, 0.15)" : "#D1E7D6" }]}>
-            <Ionicons name="leaf" size={18} color={isDark ? "#34D399" : "#0D2E22"} />
+        {/* Bannière Budgétaire Dynamique */}
+        {totalBudgetLimit > 0 && (
+          <View
+            style={[
+              styles.bannerCard,
+              {
+                backgroundColor: isUnderBudget
+                  ? colors.bannerBg
+                  : isDark
+                  ? "#2A1414"
+                  : "#FEE2E2",
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.leafCircle,
+                {
+                  backgroundColor: isUnderBudget
+                    ? isDark
+                      ? "rgba(52, 211, 153, 0.18)"
+                      : "#D1E7D6"
+                    : "rgba(239, 68, 68, 0.2)",
+                },
+              ]}
+            >
+              <Ionicons
+                name={isUnderBudget ? "shield-checkmark" : "alert-circle"}
+                size={20}
+                color={isUnderBudget ? (isDark ? "#34D399" : "#059669") : "#EF4444"}
+              />
+            </View>
+            <View style={styles.bannerInfo}>
+              <Text
+                style={[
+                  styles.bannerTitle,
+                  {
+                    color: isUnderBudget
+                      ? isDark
+                        ? "#34D399"
+                        : "#065F46"
+                      : "#DC2626",
+                  },
+                ]}
+              >
+                {isUnderBudget
+                  ? `Sous le plafond : ${budgetUsagePercent}% consommé`
+                  : `Attention : Dépassement à ${budgetUsagePercent}%`}
+              </Text>
+              <Text
+                style={[
+                  styles.bannerSubtitle,
+                  { color: isDark ? "#88988E" : "#4B5563" },
+                ]}
+              >
+                {isUnderBudget
+                  ? `Vous avez dépensé ${formatCurrency(periodSummary.totalExpense)} sur un plafond de ${formatCurrency(totalBudgetLimit)}.`
+                  : `Vos dépenses de ${formatCurrency(periodSummary.totalExpense)} dépassent le plafond de ${formatCurrency(totalBudgetLimit)}.`}
+              </Text>
+            </View>
           </View>
-          <View style={styles.bannerInfo}>
-            <Text style={[styles.bannerTitle, { color: colors.bannerText }]}>
-              You're 12% under budget!
-            </Text>
-            <Text style={[styles.bannerSubtitle, { color: isDark ? "#88988E" : "#4B5563" }]}>
-              Great job managing your spending this month.
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.bannerText} />
-        </View>
+        )}
 
-        {/* Section: Spending Trend */}
-        <View style={[styles.sectionHeaderRow, { marginTop: 24 }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Spending Trend</Text>
+        {/* Évolution chronologique des dépenses */}
+        <View style={{ marginTop: 20 }}>
+          <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 4 }]}>
+            Tendance journalière
+          </Text>
+          <SpendingTrendChart points={chartPoints} />
         </View>
-
-        <SpendingTrendChart />
       </ScrollView>
     </SafeAreaView>
   );
@@ -128,72 +247,85 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 10,
-  },
-  circleBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: "700",
+    fontSize: 20,
+    fontWeight: "800",
     letterSpacing: -0.3,
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    fontWeight: "500",
+    marginTop: 2,
+  },
+  plusBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
   },
   scroll: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
+    paddingTop: 12,
     paddingBottom: 40,
+    gap: 12,
   },
   pillsRow: {
     flexDirection: "row",
     gap: 8,
-    marginVertical: 14,
+    marginVertical: 4,
   },
   pillItem: {
     flex: 1,
     paddingVertical: 10,
-    borderRadius: 20,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
   },
   pillText: {
     fontSize: 13,
   },
-  sectionHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 12,
-    marginBottom: 8,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    letterSpacing: -0.3,
-  },
-  dropdownBtn: {
-    flexDirection: "row",
+  summaryBox: {
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
     alignItems: "center",
     gap: 4,
   },
-  dropdownText: {
-    fontSize: 13,
+  summaryBoxLabel: {
+    fontSize: 12,
     fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  summaryBoxValue: {
+    fontSize: 26,
+    fontWeight: "800",
+  },
+  cardSection: {
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    marginTop: 4,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: -0.2,
   },
   bannerCard: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
-    borderRadius: 20,
+    padding: 14,
+    borderRadius: 18,
     gap: 12,
-    marginTop: 16,
+    marginTop: 6,
   },
   leafCircle: {
     width: 40,
@@ -207,11 +339,11 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   bannerTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
   },
   bannerSubtitle: {
-    fontSize: 12,
-    fontWeight: "500",
+    fontSize: 11,
+    lineHeight: 15,
   },
 });

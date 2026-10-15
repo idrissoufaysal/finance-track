@@ -99,6 +99,12 @@ export function isDateInPeriod(targetDateStr: string, timeFrame: TimeFrame, anch
     return targetTime >= s && targetTime <= e;
   }
 
+  if (timeFrame === 'year') {
+    const s = new Date(anchorDate.getFullYear(), 0, 1, 0, 0, 0, 0).getTime();
+    const e = new Date(anchorDate.getFullYear(), 11, 31, 23, 59, 59, 999).getTime();
+    return targetTime >= s && targetTime <= e;
+  }
+
   return false;
 }
 
@@ -167,6 +173,14 @@ export function getPeriodTitle(timeFrame: TimeFrame, anchorDate: Date): string {
     return capitalized;
   }
 
+  if (timeFrame === 'year') {
+    const isCurrentYear = anchorDate.getFullYear() === now.getFullYear();
+    if (isCurrentYear) {
+      return `Cette année (${anchorDate.getFullYear()})`;
+    }
+    return `Année ${anchorDate.getFullYear()}`;
+  }
+
   return '';
 }
 
@@ -184,6 +198,9 @@ export function isCurrentPeriod(timeFrame: TimeFrame, anchorDate: Date): boolean
   if (timeFrame === 'month') {
     return anchorDate.getMonth() === now.getMonth() && anchorDate.getFullYear() === now.getFullYear();
   }
+  if (timeFrame === 'year') {
+    return anchorDate.getFullYear() === now.getFullYear();
+  }
   return false;
 }
 
@@ -198,6 +215,8 @@ export function shiftDate(date: Date, timeFrame: TimeFrame, direction: 1 | -1): 
     res.setDate(res.getDate() + direction * 7);
   } else if (timeFrame === 'month') {
     res.setMonth(res.getMonth() + direction);
+  } else if (timeFrame === 'year') {
+    res.setFullYear(res.getFullYear() + direction);
   }
   return res;
 }

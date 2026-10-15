@@ -2,18 +2,18 @@ import { Transaction, Budget } from '@/types/finance';
 import { toISODate } from '@/utils/dateUtils';
 
 export const DEFAULT_BUDGETS: Budget[] = [
-  { categoryId: 'food', monthlyLimit: 450 },
-  { categoryId: 'housing', monthlyLimit: 950 },
-  { categoryId: 'transport', monthlyLimit: 120 },
-  { categoryId: 'shopping', monthlyLimit: 200 },
-  { categoryId: 'entertainment', monthlyLimit: 150 },
-  { categoryId: 'health', monthlyLimit: 100 },
-  { categoryId: 'bills', monthlyLimit: 120 },
-  { categoryId: 'other_expense', monthlyLimit: 150 },
+  { categoryId: 'food', monthlyLimit: 150000 },
+  { categoryId: 'housing', monthlyLimit: 250000 },
+  { categoryId: 'transport', monthlyLimit: 50000 },
+  { categoryId: 'shopping', monthlyLimit: 75000 },
+  { categoryId: 'entertainment', monthlyLimit: 40000 },
+  { categoryId: 'health', monthlyLimit: 30000 },
+  { categoryId: 'bills', monthlyLimit: 45000 },
+  { categoryId: 'other_expense', monthlyLimit: 35000 },
 ];
 
 /**
- * Optional demo generator if the user explicitly wants sample data in the future
+ * Jeu de données de démonstration réaliste en FCFA
  */
 export function generateDemoTransactions(): Transaction[] {
   const now = new Date();
@@ -45,12 +45,12 @@ export function generateDemoTransactions(): Transaction[] {
     });
   };
 
-  addTx(0, '08:45', 'Café & Croissant', 3.80, 'expense', 'food', 'apple_pay');
-  addTx(0, '12:30', 'Déjeuner brasserie', 18.50, 'expense', 'food', 'card');
-  addTx(1, '19:40', 'Courses alimentation', 74.30, 'expense', 'food', 'card');
-  addTx(2, '10:00', 'Virement Freelance', 480.00, 'income', 'freelance', 'transfer');
-  addTx(8, '07:30', 'Salaire Net', 2950.00, 'income', 'salary', 'transfer');
-  addTx(8, '10:00', 'Loyer appartement', 890.00, 'expense', 'housing', 'transfer');
+  addTx(0, '08:45', 'Café & Croissant', 2500, 'expense', 'food', 'cash');
+  addTx(0, '12:30', 'Déjeuner restaurant', 8500, 'expense', 'food', 'card');
+  addTx(1, '19:40', 'Courses supermarché', 34500, 'expense', 'food', 'card');
+  addTx(2, '10:00', 'Virement Freelance', 250000, 'income', 'freelance', 'transfer');
+  addTx(8, '07:30', 'Salaire mensuel', 750000, 'income', 'salary', 'transfer');
+  addTx(8, '10:00', 'Loyer appartement', 180000, 'expense', 'housing', 'transfer');
 
   return txs;
 }

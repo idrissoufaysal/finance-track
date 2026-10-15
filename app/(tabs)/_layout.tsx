@@ -1,77 +1,96 @@
 import React from "react";
-import { View, StyleSheet, Pressable } from "react-native";
+import { View, Text, StyleSheet, Pressable, Platform } from "react-native";
 import { Tabs, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/context/ThemeContext";
 
 export default function TabLayout() {
   const { colors, isDark } = useTheme();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+
+  const bottomInset = Math.max(insets.bottom, Platform.OS === "ios" ? 18 : 14);
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: isDark ? "#34D399" : "#0D2E22",
-        tabBarInactiveTintColor: colors.tabIconDefault,
+        tabBarShowLabel: false,
         tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.border,
-          borderTopWidth: 1,
-          height: 68,
-          paddingBottom: 10,
-          paddingTop: 8,
+          position: "absolute",
+          bottom: bottomInset,
+          left: 20,
+          right: 20,
+          height: 64,
+          borderRadius: 32,
+          backgroundColor: isDark ? "rgba(16, 24, 20, 0.96)" : "rgba(255, 255, 255, 0.96)",
+          borderWidth: 1,
+          borderColor: isDark ? "rgba(52, 211, 153, 0.25)" : "rgba(0, 0, 0, 0.08)",
+          shadowColor: isDark ? "#34D399" : "#000",
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: isDark ? 0.25 : 0.08,
+          shadowRadius: 18,
           elevation: 10,
-          shadowColor: "#000",
-          shadowOpacity: isDark ? 0.3 : 0.06,
-          shadowRadius: 10,
-          shadowOffset: { width: 0, height: -3 },
-        },
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: "600",
-          marginTop: 2,
+          paddingHorizontal: 12,
         },
       }}
     >
-      {/* 1. Home */}
+      {/* 1. Onglet Accueil */}
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
-          tabBarLabel: "Home",
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? "home" : "home-outline"}
-              size={22}
-              color={color}
-            />
+          title: "Accueil",
+          tabBarIcon: ({ focused }) => (
+            <View
+              style={[
+                styles.tabItemWrap,
+                focused && [
+                  styles.tabItemActive,
+                  {
+                    backgroundColor: isDark
+                      ? "rgba(52, 211, 153, 0.16)"
+                      : "rgba(5, 150, 105, 0.1)",
+                  },
+                ],
+              ]}
+            >
+              <Ionicons
+                name={focused ? "home" : "home-outline"}
+                size={20}
+                color={
+                  focused
+                    ? isDark
+                      ? "#34D399"
+                      : "#059669"
+                    : colors.textSecondary
+                }
+              />
+              <Text
+                style={[
+                  styles.tabLabel,
+                  {
+                    color: focused
+                      ? isDark
+                        ? "#34D399"
+                        : "#059669"
+                      : colors.textSecondary,
+                    fontWeight: focused ? "700" : "500",
+                  },
+                ]}
+              >
+                Accueil
+              </Text>
+            </View>
           ),
         }}
       />
 
-      {/* 2. Analytics */}
-      <Tabs.Screen
-        name="analytics"
-        options={{
-          title: "Analytics",
-          tabBarLabel: "Analytics",
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? "pie-chart" : "pie-chart-outline"}
-              size={22}
-              color={color}
-            />
-          ),
-        }}
-      />
-
-      {/* 3. Center Floating Action Button (⇄) */}
+      {/* 2. Bouton Central [+] avec halo émeraude tactile */}
       <Tabs.Screen
         name="center-action"
         options={{
           title: "",
-          tabBarLabel: () => null,
           tabBarButton: () => (
             <View style={styles.floatingCenterWrap}>
               <Pressable
@@ -79,13 +98,19 @@ export default function TabLayout() {
                 style={({ pressed }) => [
                   styles.floatingCenterBtn,
                   {
-                    backgroundColor: isDark ? "#123728" : "#0D2E22",
-                    borderColor: isDark ? "#34D399" : "rgba(255, 255, 255, 0.2)",
-                    opacity: pressed ? 0.85 : 1,
+                    backgroundColor: isDark ? "#34D399" : "#059669",
+                    shadowColor: isDark ? "#34D399" : "#059669",
+                    opacity: pressed ? 0.9 : 1,
+                    transform: [{ scale: pressed ? 0.94 : 1 }],
                   },
                 ]}
+                hitSlop={6}
               >
-                <Ionicons name="swap-horizontal" size={24} color="#34D399" />
+                <Ionicons
+                  name="add"
+                  size={30}
+                  color={isDark ? "#07100C" : "#FFFFFF"}
+                />
               </Pressable>
             </View>
           ),
@@ -98,35 +123,68 @@ export default function TabLayout() {
         }}
       />
 
-      {/* 4. Cards / Budgets */}
+      {/* 3. Onglet Historique */}
       <Tabs.Screen
-        name="budgets"
+        name="transactions"
         options={{
-          title: "Cards",
-          tabBarLabel: "Cards",
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? "card" : "card-outline"}
-              size={22}
-              color={color}
-            />
+          title: "Historique",
+          tabBarIcon: ({ focused }) => (
+            <View
+              style={[
+                styles.tabItemWrap,
+                focused && [
+                  styles.tabItemActive,
+                  {
+                    backgroundColor: isDark
+                      ? "rgba(52, 211, 153, 0.16)"
+                      : "rgba(5, 150, 105, 0.1)",
+                  },
+                ],
+              ]}
+            >
+              <Ionicons
+                name={focused ? "receipt" : "receipt-outline"}
+                size={20}
+                color={
+                  focused
+                    ? isDark
+                      ? "#34D399"
+                      : "#059669"
+                    : colors.textSecondary
+                }
+              />
+              <Text
+                style={[
+                  styles.tabLabel,
+                  {
+                    color: focused
+                      ? isDark
+                        ? "#34D399"
+                        : "#059669"
+                      : colors.textSecondary,
+                    fontWeight: focused ? "700" : "500",
+                  },
+                ]}
+              >
+                Historique
+              </Text>
+            </View>
           ),
         }}
       />
 
-      {/* 5. Profile / Transactions */}
+      {/* Routes secondaires désactivées de la navbar */}
       <Tabs.Screen
-        name="transactions"
+        name="analytics"
         options={{
-          title: "Profile",
-          tabBarLabel: "Profile",
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? "person" : "person-outline"}
-              size={22}
-              color={color}
-            />
-          ),
+          href: null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="budgets"
+        options={{
+          href: null,
         }}
       />
     </Tabs>
@@ -134,22 +192,36 @@ export default function TabLayout() {
 }
 
 const styles = StyleSheet.create({
+  tabItemWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  tabItemActive: {
+    paddingHorizontal: 16,
+  },
+  tabLabel: {
+    fontSize: 12,
+  },
   floatingCenterWrap: {
-    top: -14,
+    top: -16,
     justifyContent: "center",
     alignItems: "center",
   },
   floatingCenterBtn: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1.5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 6,
+    borderWidth: 2,
+    borderColor: "rgba(255, 255, 255, 0.25)",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.45,
+    shadowRadius: 12,
+    elevation: 8,
   },
 });

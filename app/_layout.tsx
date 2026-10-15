@@ -67,12 +67,7 @@ function RootNavigation() {
           name="new-transaction"
           options={{
             presentation: "modal",
-            title: "Nouvelle transaction",
-            headerShown: true,
-            headerStyle: {
-              backgroundColor: colors.surface,
-            },
-            headerTintColor: colors.text,
+            headerShown: false,
           }}
         />
       </Stack>

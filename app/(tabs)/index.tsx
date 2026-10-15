@@ -11,8 +11,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useFinance } from "@/context/FinanceContext";
 import { useTheme } from "@/context/ThemeContext";
+import { Palette } from "@/constants/Colors";
+import { PeriodSelector } from "@/components/PeriodSelector";
 import { BalanceCard } from "@/components/BalanceCard";
-import { QuickActions } from "@/components/QuickActions";
 import { TransactionItem } from "@/components/TransactionItem";
 import { EmptyState } from "@/components/EmptyState";
 
@@ -21,21 +22,21 @@ export default function HomeScreen() {
   const { colors, isDark, toggleTheme } = useTheme();
   const { filteredTransactions, resetToDemo } = useFinance();
 
-  const recentTransactions = filteredTransactions.slice(0, 5);
+  const recentTransactions = filteredTransactions.slice(0, 10);
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      {/* Top Header: Good morning + Search & Notification/Theme buttons */}
+    <SafeAreaView edges={["top"]} style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      {/* En-tête : Salutations + Recherche et Thème */}
       <View style={styles.header}>
         <View style={styles.greetingCol}>
-          <Text style={[styles.greetingTitle, { color: colors.text }]}>Good morning</Text>
+          <Text style={[styles.greetingTitle, { color: colors.text }]}>Bonjour</Text>
           <Text style={[styles.greetingSubtitle, { color: colors.textSecondary }]}>
-            Let's build your brighter future
+            Vos finances en toute simplicité
           </Text>
         </View>
 
         <View style={styles.headerRightBtns}>
-          {/* Search Button */}
+          {/* Recherche */}
           <Pressable
             onPress={() => router.push("/(tabs)/transactions")}
             style={[
@@ -46,7 +47,7 @@ export default function HomeScreen() {
             <Ionicons name="search-outline" size={18} color={colors.text} />
           </Pressable>
 
-          {/* Theme Toggle Button (Moon/Sun) */}
+          {/* Bascule de Thème */}
           <Pressable
             onPress={toggleTheme}
             style={[
@@ -68,44 +69,82 @@ export default function HomeScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Pine Green Hero Balance Card */}
+        {/* 1. Filtres temporels : Aujourd'hui | Semaine | Mois | Année (AVANT la carte de solde) */}
+        <PeriodSelector />
+
+        {/* 2. Carte de Solde avec Cercle SVG Entrées / Sorties */}
         <BalanceCard />
 
-        {/* 4 Quick Actions Row: Add Money, Send, Convert, More */}
-        <QuickActions />
+        {/* 3. Bouton d'action rapide principal : Nouvelle transaction */}
+        <View style={styles.actionRow}>
+          <Pressable
+            onPress={() => router.push("/new-transaction")}
+            style={({ pressed }) => [
+              styles.addBtn,
+              {
+                backgroundColor: isDark ? "#34D399" : "#059669",
+                opacity: pressed ? 0.85 : 1,
+              },
+            ]}
+          >
+            <Ionicons
+              name="add-circle"
+              size={20}
+              color={isDark ? Palette.obsidianBg : "#FFFFFF"}
+            />
+            <Text
+              style={[
+                styles.addBtnText,
+                { color: isDark ? Palette.obsidianBg : "#FFFFFF" },
+              ]}
+            >
+              Nouvelle opération
+            </Text>
+          </Pressable>
+        </View>
 
-        {/* Recent Transactions Section */}
+        {/* 4. Liste des Opérations Récentes de la période */}
         <View style={styles.recentSection}>
           <View style={styles.sectionHeaderRow}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Recent Transactions
+              Opérations de la période
             </Text>
-            <Pressable
-              onPress={() => router.push("/(tabs)/transactions")}
-              hitSlop={8}
-            >
-              <Text style={[styles.seeAllText, { color: colors.textSecondary }]}>
-                See all →
-              </Text>
-            </Pressable>
+            {filteredTransactions.length > 0 && (
+              <Pressable
+                onPress={() => router.push("/(tabs)/transactions")}
+                hitSlop={8}
+              >
+                <Text style={[styles.seeAllText, { color: colors.textSecondary }]}>
+                  Voir tout ({filteredTransactions.length}) →
+                </Text>
+              </Pressable>
+            )}
           </View>
 
           {recentTransactions.length === 0 ? (
             <View style={styles.emptyWrap}>
               <EmptyState
-                title="No transactions yet"
-                subtitle="Tap 'Add Money' above or load sample data to explore your transactions."
+                title="Aucune opération"
+                subtitle="Enregistrez une dépense ou un revenu pour cette période."
               />
               <Pressable
                 onPress={resetToDemo}
                 style={[styles.demoPillBtn, { backgroundColor: colors.tint }]}
               >
                 <Ionicons name="sparkles" size={14} color="#fff" />
-                <Text style={styles.demoPillText}>Load Sample Data</Text>
+                <Text style={styles.demoPillText}>Charger des exemples démo</Text>
               </Pressable>
             </View>
           ) : (
-            <View style={[styles.transactionsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View
+              style={[
+                styles.transactionsCard,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
               {recentTransactions.map((tx) => (
                 <TransactionItem key={tx.id} transaction={tx} showDate={true} />
               ))}
@@ -127,10 +166,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 12,
-    paddingBottom: 8,
+    paddingBottom: 6,
   },
   greetingCol: {
-    gap: 4,
+    gap: 3,
   },
   greetingTitle: {
     fontSize: 24,
@@ -158,35 +197,53 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: 100,
+  },
+  actionRow: {
+    paddingHorizontal: 16,
+    marginTop: 14,
+    marginBottom: 4,
+  },
+  addBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 13,
+    borderRadius: 16,
+    gap: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  addBtnText: {
+    fontSize: 15,
+    fontWeight: "700",
   },
   recentSection: {
-    marginTop: 24,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
+    marginTop: 16,
+    gap: 10,
   },
   sectionHeaderRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    paddingHorizontal: 4,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "700",
-    letterSpacing: -0.3,
+    letterSpacing: -0.2,
   },
   seeAllText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
   },
-  transactionsCard: {
-    borderRadius: 24,
-    overflow: "hidden",
-    borderWidth: 1,
-  },
   emptyWrap: {
+    paddingVertical: 16,
     alignItems: "center",
-    paddingVertical: 12,
   },
   demoPillBtn: {
     flexDirection: "row",
@@ -200,6 +257,12 @@ const styles = StyleSheet.create({
   demoPillText: {
     color: "#fff",
     fontSize: 13,
-    fontWeight: "700",
+    fontWeight: "600",
+  },
+  transactionsCard: {
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+    borderWidth: 1,
   },
 });

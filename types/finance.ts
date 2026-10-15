@@ -1,4 +1,4 @@
-export type TimeFrame = 'day' | 'week' | 'month';
+export type TimeFrame = 'day' | 'week' | 'month' | 'year';
 
 export type TransactionType = 'expense' | 'income';
 

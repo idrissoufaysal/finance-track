@@ -15,25 +15,22 @@ import { useTheme } from "@/context/ThemeContext";
 import { PeriodSelector } from "@/components/PeriodSelector";
 import { TransactionItem } from "@/components/TransactionItem";
 import { EmptyState } from "@/components/EmptyState";
-import { ALL_CATEGORIES } from "@/constants/categories";
+import { Palette } from "@/constants/Colors";
 import { formatCurrency } from "@/utils/dateUtils";
 
 export default function TransactionsScreen() {
   const router = useRouter();
-  const { theme, colors, isDark, toggleTheme } = useTheme();
+  const { colors, isDark, toggleTheme } = useTheme();
   const { filteredTransactions } = useFinance();
 
   const [search, setSearch] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<"all" | "expense" | "income">("all");
 
   const displayedTransactions = useMemo(() => {
     return filteredTransactions.filter((tx) => {
-      // Type filter
+      // Filtre de type
       if (typeFilter !== "all" && tx.type !== typeFilter) return false;
-      // Category filter
-      if (selectedCategory && tx.categoryId !== selectedCategory) return false;
-      // Search text
+      // Recherche textuelle
       if (search.trim()) {
         const query = search.toLowerCase();
         const matchTitle = tx.title.toLowerCase().includes(query);
@@ -42,11 +39,11 @@ export default function TransactionsScreen() {
       }
       return true;
     });
-  }, [filteredTransactions, typeFilter, selectedCategory, search]);
+  }, [filteredTransactions, typeFilter, search]);
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.surface }]}>
-      {/* Search & Top Action */}
+    <SafeAreaView edges={["top"]} style={[styles.safeArea, { backgroundColor: colors.surface }]}>
+      {/* Barre de recherche et actions supérieures */}
       <View style={[styles.topHeader, { backgroundColor: colors.surface, borderBottomColor: colors.borderSubtle }]}>
         <View style={[styles.searchBox, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
           <Ionicons name="search" size={18} color={colors.textSecondary} />
@@ -64,7 +61,7 @@ export default function TransactionsScreen() {
           )}
         </View>
 
-        {/* Quick Theme Switcher */}
+        {/* Bascule de Thème Rapide */}
         <Pressable
           onPress={toggleTheme}
           accessibilityRole="button"
@@ -89,10 +86,10 @@ export default function TransactionsScreen() {
           onPress={() => router.push("/new-transaction")}
           style={({ pressed }) => [
             styles.plusBtn,
-            { backgroundColor: colors.tint, opacity: pressed ? 0.8 : 1 },
+            { backgroundColor: isDark ? Palette.mintElectric : "#059669", opacity: pressed ? 0.8 : 1 },
           ]}
         >
-          <Ionicons name="add" size={22} color="#fff" />
+          <Ionicons name="add" size={22} color={isDark ? Palette.obsidianBg : "#FFFFFF"} />
         </Pressable>
       </View>
 
@@ -101,10 +98,10 @@ export default function TransactionsScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Period Selector (Day / Week / Month) */}
+        {/* Sélecteur de période (Aujourd'hui / Semaine / Mois / Année) */}
         <PeriodSelector />
 
-        {/* Type Filter Buttons */}
+        {/* Filtres de Type : Toutes | Dépenses | Revenus */}
         <View style={styles.filterRow}>
           {(["all", "expense", "income"] as const).map((t) => {
             const isActive = typeFilter === t;
@@ -116,7 +113,11 @@ export default function TransactionsScreen() {
                 style={[
                   styles.filterPill,
                   {
-                    backgroundColor: isActive ? colors.tint : colors.surfaceSecondary,
+                    backgroundColor: isActive
+                      ? isDark
+                        ? "#34D399"
+                        : "#059669"
+                      : colors.surfaceSecondary,
                   },
                 ]}
               >
@@ -124,7 +125,11 @@ export default function TransactionsScreen() {
                   style={[
                     styles.filterPillText,
                     {
-                      color: isActive ? "#fff" : colors.textSecondary,
+                      color: isActive
+                        ? isDark
+                          ? "#07100C"
+                          : "#FFFFFF"
+                        : colors.textSecondary,
                       fontWeight: isActive ? "700" : "500",
                     },
                   ]}
@@ -136,67 +141,7 @@ export default function TransactionsScreen() {
           })}
         </View>
 
-        {/* Quick Category Chips */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoryChips}
-        >
-          <Pressable
-            onPress={() => setSelectedCategory(null)}
-            style={[
-              styles.chip,
-              {
-                backgroundColor:
-                  selectedCategory === null ? colors.text : colors.surfaceSecondary,
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.chipText,
-                { color: selectedCategory === null ? colors.surface : colors.textSecondary },
-              ]}
-            >
-              Toutes catégories
-            </Text>
-          </Pressable>
-
-          {ALL_CATEGORIES.map((cat) => {
-            const isSelected = selectedCategory === cat.id;
-            return (
-              <Pressable
-                key={cat.id}
-                onPress={() =>
-                  setSelectedCategory(isSelected ? null : cat.id)
-                }
-                style={[
-                  styles.chip,
-                  {
-                    backgroundColor: isSelected ? cat.color : colors.surfaceSecondary,
-                  },
-                ]}
-              >
-                <Ionicons
-                  name={cat.icon as any}
-                  size={14}
-                  color={isSelected ? "#fff" : cat.color}
-                  style={{ marginRight: 4 }}
-                />
-                <Text
-                  style={[
-                    styles.chipText,
-                    { color: isSelected ? "#fff" : colors.textSecondary },
-                  ]}
-                >
-                  {cat.name}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-
-        {/* Results summary */}
+        {/* Récapitulatif des résultats */}
         <View style={styles.resultsInfoRow}>
           <Text style={[styles.resultsCount, { color: colors.textSecondary }]}>
             {displayedTransactions.length} opération{displayedTransactions.length > 1 ? "s" : ""}
@@ -208,11 +153,11 @@ export default function TransactionsScreen() {
           </Text>
         </View>
 
-        {/* Transactions list */}
+        {/* Liste des opérations sans catégories superflues */}
         {displayedTransactions.length === 0 ? (
           <EmptyState
             title="Aucun résultat"
-            subtitle="Modifiez vos critères de recherche ou ajoutez une transaction."
+            subtitle="Modifiez vos critères ou enregistrez une nouvelle opération."
           />
         ) : (
           <View
@@ -244,22 +189,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     gap: 8,
-    borderBottomWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   searchBox: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 12,
     height: 42,
     borderRadius: 14,
+    paddingHorizontal: 12,
     borderWidth: 1,
     gap: 8,
   },
   searchInput: {
     flex: 1,
     fontSize: 14,
-    height: "100%",
+    paddingVertical: 0,
   },
   themeToggleBtn: {
     width: 42,
@@ -280,58 +225,45 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 32,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 100,
+    gap: 12,
   },
   filterRow: {
     flexDirection: "row",
-    paddingHorizontal: 16,
     gap: 8,
-    marginBottom: 8,
+    marginVertical: 4,
   },
   filterPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
+    flex: 1,
+    paddingVertical: 9,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
   },
   filterPillText: {
     fontSize: 13,
-  },
-  categoryChips: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    gap: 8,
-  },
-  chip: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  chipText: {
-    fontSize: 12,
-    fontWeight: "600",
   },
   resultsInfoRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 8,
+    paddingHorizontal: 4,
+    marginTop: 4,
   },
   resultsCount: {
-    fontSize: 13,
-    fontWeight: "600",
+    fontSize: 12,
+    fontWeight: "500",
   },
   resultsTotal: {
     fontSize: 14,
     fontWeight: "700",
   },
   listCard: {
-    marginHorizontal: 16,
     borderRadius: 20,
-    overflow: "hidden",
+    paddingHorizontal: 16,
+    paddingVertical: 4,
     borderWidth: 1,
   },
 });
