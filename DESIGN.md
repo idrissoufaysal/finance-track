@@ -99,10 +99,10 @@ Finance Track pairs the calm reassurance of natural emerald greens with the razo
 The interface prioritizes **Operate** mode: high scanability, tabular numerical alignment, tactile haptic button responses, and zero decorative fluff. Every element has semantic financial intent.
 
 **Key Characteristics:**
-- **Strict Dual-Theme Parity**: Every screen, card, modal, and badge has a 1:1 tailored rendering in Light and Dark mode.
+- **Strict Dual-Theme Parity**: Every screen, card, modal, and badge has a 1:1 tailored rendering in Light and Dark mode, driven by a single theme source of truth (`ThemeContext`).
 - **Tabular Precision**: Monospaced tabular numeral variants (`fontVariant: ["tabular-nums"]`) ensure amounts never jitter or shift columns.
-- **Progressive Disclosure**: Compact hero KPI cards expandable to detailed breakdowns and granular category leaderboards.
-- **Glanceable Thresholds**: Color-coded budget feedback: Safe Emerald (0-75%), Warning Amber (75-99%), and Critical Coral (100%+).
+- **Progressive Disclosure**: Compact hero KPI cards with a period chart and a scannable, filterable transaction history.
+- **Tactile Feedback**: Swipe-to-delete rows, long-press actions, and a floating central action button.
 
 ## Colors
 
@@ -117,14 +117,6 @@ The palette is anchored by deep emerald greens symbolizing financial vitality, p
 - **Semantic Cash Flows**:
   - Income (+): Emerald 600 (`#059669`) / Emerald 500 (`#10b981`), Soft Well `#dcfce7` / `rgba(16, 185, 129, 0.15)`
   - Expense (-): Crimson Red 600 (`#dc2626`) / Red 500 (`#ef4444`), Soft Well `#fee2e2` / `rgba(239, 68, 68, 0.15)`
-- **Category Accents**:
-  - Logement / Bureau: Indigo `#6366f1`
-  - Alimentation / Restaurants: Amber `#f59e0b`
-  - Transports: Blue `#3b82f6`
-  - Loisirs & Sorties: Purple `#8b5cf6`
-  - Santé & Bien-être: Rose `#f43f5e`
-  - Shopping: Teal `#14b8a6`
-  - Salaire & Investissement: Emerald `#10b981`
 
 ## Typography
 
@@ -163,10 +155,10 @@ The palette is anchored by deep emerald greens symbolizing financial vitality, p
 1. **PeriodSelector**: Segmented control pill with sliding or active pill backdrop; indicates current range with previous/next date chevron controls.
 2. **BalanceCard**: Hero element displaying net balance, savings rate badge, total income (down arrow in soft green circle) and total expense (up arrow in soft red circle).
 3. **FinanceChart**: Responsive bar chart comparing period bars with dynamic highlight on the highest expenditure day/period.
-4. **CategoryBreakdownCard**: Progress track showing spending by category with percentage and count.
-5. **BudgetProgressCard**: Multi-tier threshold indicator with remaining allowance or over-budget warning.
-6. **TransactionItem**: High-density transaction row with category badge, bold title, date/time sub-line, payment method tag, and formatted signed amount.
-7. **Modal Sheet (New Transaction)**: Big tabular numeral input, expense/income toggle switch, grid of category icons, payment method chips, and high-contrast submit button.
+4. **TransactionItem**: High-density transaction row with direction badge, bold title, date/time sub-line, and formatted signed amount. Swipe-to-delete with a revealed destructive action.
+5. **DatePickerModal**: Native month-grid calendar with Monday-first weekdays, today shortcut, and light/dark theming.
+6. **Modal Sheet (New Transaction)**: Big tabular numeral input, expense/income toggle switch, date picker, optional monthly recurrence, and a high-contrast submit button.
+7. **Onboarding**: Single-CTA welcome screen shown once on first launch.
 
 ## Do's and Don'ts
 

@@ -1,10 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Transaction,
-  Budget,
   TimeFrame,
   PeriodSummary,
-  CategorySummary,
   DailyPoint,
 } from '@/types/finance';
 import {
@@ -12,11 +10,8 @@ import {
   insertTransaction,
   updateTransactionRecord,
   deleteTransactionRecord,
-  loadBudgets,
-  upsertBudget,
   clearAllTransactions,
   resetStorageToDemo,
-  DEFAULT_BUDGETS,
 } from '@/services/storage';
 import {
   isDateInPeriod,
@@ -26,11 +21,9 @@ import {
   startOfWeek,
   toISODate,
 } from '@/utils/dateUtils';
-import { getCategoryById } from '@/constants/categories';
 
 interface FinanceContextType {
   transactions: Transaction[];
-  budgets: Budget[];
   isLoading: boolean;
   timeFrame: TimeFrame;
   selectedDate: Date;
@@ -41,18 +34,16 @@ interface FinanceContextType {
   goToToday: () => void;
   periodTitle: string;
   isCurrent: boolean;
-  
+
   // Computed for selected period
   filteredTransactions: Transaction[];
   periodSummary: PeriodSummary;
-  categorySummaries: CategorySummary[];
   chartPoints: DailyPoint[];
-  
+
   // Actions
   addTransaction: (data: Omit<Transaction, 'id' | 'createdAt'>) => Promise<Transaction>;
   updateTransaction: (tx: Transaction) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
-  updateBudget: (categoryId: string, monthlyLimit: number) => Promise<void>;
   clearAllData: () => Promise<void>;
   resetToDemo: () => Promise<void>;
 }
@@ -61,7 +52,6 @@ const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 
 export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [budgets, setBudgets] = useState<Budget[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [timeFrame, setTimeFrame] = useState<TimeFrame>('day');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -71,16 +61,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     async function init() {
       setIsLoading(true);
       try {
-        const [loadedTxs, loadedBudgets] = await Promise.all([
-          loadTransactions(),
-          loadBudgets(),
-        ]);
+        const loadedTxs = await loadTransactions();
         setTransactions(loadedTxs);
-        setBudgets(loadedBudgets);
       } catch (e) {
         console.error('Failed to init finance context:', e);
         setTransactions([]);
-        setBudgets(DEFAULT_BUDGETS);
       } finally {
         setIsLoading(false);
       }
@@ -94,7 +79,14 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   }, [timeFrame]);
 
   const goToNext = useCallback(() => {
-    setSelectedDate((prev) => shiftDate(prev, timeFrame, 1));
+    setSelectedDate((prev) => {
+      // Never navigate forward past the current period: there are no future transactions.
+      if (isCurrentPeriod(timeFrame, prev)) return prev;
+      const next = shiftDate(prev, timeFrame, 1);
+      if (isCurrentPeriod(timeFrame, next)) return next;
+      // If prev is already ahead of the current period, clamp back to it.
+      return next.getTime() > new Date().getTime() ? prev : next;
+    });
   }, [timeFrame]);
 
   const goToToday = useCallback(() => {
@@ -145,36 +137,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       transactionCount: filteredTransactions.length,
     };
   }, [filteredTransactions]);
-
-  // Category breakdown for expenses in this period
-  const categorySummaries = useMemo<CategorySummary[]>(() => {
-    const map = new Map<string, { total: number; count: number }>();
-
-    for (const tx of filteredTransactions) {
-      if (tx.type === 'expense') {
-        const cur = map.get(tx.categoryId) || { total: 0, count: 0 };
-        map.set(tx.categoryId, {
-          total: cur.total + tx.amount,
-          count: cur.count + 1,
-        });
-      }
-    }
-
-    const totalExpense = periodSummary.totalExpense;
-    const result: CategorySummary[] = [];
-
-    map.forEach((value, catId) => {
-      const category = getCategoryById(catId);
-      result.push({
-        category,
-        totalAmount: value.total,
-        count: value.count,
-        percentage: totalExpense > 0 ? (value.total / totalExpense) * 100 : 0,
-      });
-    });
-
-    return result.sort((a, b) => b.totalAmount - a.totalAmount);
-  }, [filteredTransactions, periodSummary.totalExpense]);
 
   // Chart data points based on timeframe
   const chartPoints = useMemo<DailyPoint[]>(() => {
@@ -339,22 +301,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
-  const updateBudget = useCallback(
-    async (categoryId: string, monthlyLimit: number): Promise<void> => {
-      setBudgets((prev) => {
-        const existing = prev.find((b) => b.categoryId === categoryId);
-        if (existing) {
-          return prev.map((b) =>
-            b.categoryId === categoryId ? { ...b, monthlyLimit } : b
-          );
-        }
-        return [...prev, { categoryId, monthlyLimit }];
-      });
-      await upsertBudget(categoryId, monthlyLimit);
-    },
-    []
-  );
-
   const clearAllData = useCallback(async (): Promise<void> => {
     await clearAllTransactions();
     setTransactions([]);
@@ -363,14 +309,12 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const resetToDemo = useCallback(async (): Promise<void> => {
     const res = await resetStorageToDemo();
     setTransactions(res.transactions);
-    setBudgets(res.budgets);
   }, []);
 
   return (
     <FinanceContext.Provider
       value={{
         transactions,
-        budgets,
         isLoading,
         timeFrame,
         selectedDate,
@@ -383,12 +327,10 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         isCurrent,
         filteredTransactions,
         periodSummary,
-        categorySummaries,
         chartPoints,
         addTransaction,
         updateTransaction,
         deleteTransaction,
-        updateBudget,
         clearAllData,
         resetToDemo,
       }}

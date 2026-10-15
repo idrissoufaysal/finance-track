@@ -1,17 +1,10 @@
 import { SafeAreaView } from "react-native-safe-area-context";
 import React from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Pressable,
-} from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useFinance } from "@/context/FinanceContext";
 import { useTheme } from "@/context/ThemeContext";
-import { Palette } from "@/constants/Colors";
 import { PeriodSelector } from "@/components/PeriodSelector";
 import { BalanceCard } from "@/components/BalanceCard";
 import { TransactionItem } from "@/components/TransactionItem";
@@ -36,9 +29,10 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.headerRightBtns}>
-          {/* Recherche */}
           <Pressable
             onPress={() => router.push("/(tabs)/transactions")}
+            accessibilityRole="button"
+            accessibilityLabel="Rechercher une opération"
             style={[
               styles.iconCircleBtn,
               { backgroundColor: colors.surface, borderColor: colors.border },
@@ -47,9 +41,10 @@ export default function HomeScreen() {
             <Ionicons name="search-outline" size={18} color={colors.text} />
           </Pressable>
 
-          {/* Bascule de Thème */}
           <Pressable
             onPress={toggleTheme}
+            accessibilityRole="button"
+            accessibilityLabel="Changer de thème"
             style={[
               styles.iconCircleBtn,
               { backgroundColor: colors.surface, borderColor: colors.border },
@@ -69,39 +64,13 @@ export default function HomeScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* 1. Filtres temporels : Aujourd'hui | Semaine | Mois | Année (AVANT la carte de solde) */}
+        {/* 1. Filtres temporels */}
         <PeriodSelector />
 
-        {/* 2. Carte de Solde avec Cercle SVG Entrées / Sorties */}
+        {/* 2. Carte de Solde */}
         <BalanceCard />
 
-        {/* 3. Bouton d'action rapide principal : Nouvelle transaction */}
-        <View style={styles.actionRow}>
-          <Pressable
-            onPress={() => router.push("/new-transaction")}
-            style={({ pressed }) => [
-              styles.addBtn,
-              {
-                backgroundColor: isDark ? "#34D399" : "#059669",
-                opacity: pressed ? 0.85 : 1,
-              },
-            ]}
-          >
-            <Ionicons
-              name="add-circle"
-              size={20}
-              color={isDark ? Palette.obsidianBg : "#FFFFFF"}
-            />
-            <Text
-              style={[
-                styles.addBtnText,
-                { color: isDark ? Palette.obsidianBg : "#FFFFFF" },
-              ]}
-            >
-              Nouvelle opération
-            </Text>
-          </Pressable>
-        </View>
+
 
         {/* 4. Liste des Opérations Récentes de la période */}
         <View style={styles.recentSection}>
@@ -113,6 +82,7 @@ export default function HomeScreen() {
               <Pressable
                 onPress={() => router.push("/(tabs)/transactions")}
                 hitSlop={8}
+                accessibilityRole="button"
               >
                 <Text style={[styles.seeAllText, { color: colors.textSecondary }]}>
                   Voir tout ({filteredTransactions.length}) →
@@ -129,20 +99,20 @@ export default function HomeScreen() {
               />
               <Pressable
                 onPress={resetToDemo}
+                accessibilityRole="button"
                 style={[styles.demoPillBtn, { backgroundColor: colors.tint }]}
               >
-                <Ionicons name="sparkles" size={14} color="#fff" />
-                <Text style={styles.demoPillText}>Charger des exemples démo</Text>
+                <Ionicons name="sparkles" size={14} color={colors.onTint} />
+                <Text style={[styles.demoPillText, { color: colors.onTint }]}>
+                  Charger des exemples démo
+                </Text>
               </Pressable>
             </View>
           ) : (
             <View
               style={[
                 styles.transactionsCard,
-                {
-                  backgroundColor: colors.surface,
-                  borderColor: colors.border,
-                },
+                { backgroundColor: colors.surface, borderColor: colors.border },
               ]}
             >
               {recentTransactions.map((tx) => (
@@ -199,27 +169,9 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 100,
   },
-  actionRow: {
+  chartSection: {
     paddingHorizontal: 16,
-    marginTop: 14,
-    marginBottom: 4,
-  },
-  addBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 13,
-    borderRadius: 16,
-    gap: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  addBtnText: {
-    fontSize: 15,
-    fontWeight: "700",
+    marginTop: 12,
   },
   recentSection: {
     paddingHorizontal: 16,
@@ -255,7 +207,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   demoPillText: {
-    color: "#fff",
     fontSize: 13,
     fontWeight: "600",
   },

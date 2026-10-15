@@ -1,5 +1,5 @@
-import React from "react";
-import { View, Text, StyleSheet, Pressable, Alert } from "react-native";
+import React, { useState, useCallback, useMemo } from "react";
+import { View, Text, StyleSheet, Pressable, Alert, Animated, PanResponder } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Transaction } from "@/types/finance";
 import { useFinance } from "@/context/FinanceContext";
@@ -11,18 +11,56 @@ interface Props {
   showDate?: boolean;
 }
 
-export function TransactionItem({ transaction }: Props) {
-  const { colors, isDark } = useTheme();
+const ACTION_WIDTH = 84;
+
+export function TransactionItem({ transaction, showDate = true }: Props) {
+  const { colors } = useTheme();
   const { deleteTransaction } = useFinance();
 
   const isIncome = transaction.type === "income";
+  const [translateX] = useState(() => new Animated.Value(0));
+  const [restOffset, setRestOffset] = useState(0);
+
+  const animateTo = useCallback(
+    (to: number) => {
+      setRestOffset(to);
+      Animated.spring(translateX, {
+        toValue: to,
+        useNativeDriver: true,
+        bounciness: 4,
+        speed: 18,
+      }).start();
+    },
+    [translateX]
+  );
+
+  const close = useCallback(() => animateTo(0), [animateTo]);
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_evt, g) =>
+          Math.abs(g.dx) > 8 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
+        onPanResponderMove: (_evt, g) => {
+          const next = Math.min(0, Math.max(-ACTION_WIDTH, restOffset + g.dx));
+          translateX.setValue(next);
+        },
+        onPanResponderRelease: (_evt, g) => {
+          animateTo(restOffset + g.dx < -ACTION_WIDTH / 2 ? -ACTION_WIDTH : 0);
+        },
+        onPanResponderTerminate: () => {
+          animateTo(restOffset < -ACTION_WIDTH / 2 ? -ACTION_WIDTH : 0);
+        },
+      }),
+    [restOffset, translateX, animateTo]
+  );
 
   const handleDelete = () => {
     Alert.alert(
       "Supprimer l'opération",
       `Voulez-vous supprimer "${transaction.title}" ?`,
       [
-        { text: "Annuler", style: "cancel" },
+        { text: "Annuler", style: "cancel", onPress: close },
         {
           text: "Supprimer",
           style: "destructive",
@@ -36,74 +74,100 @@ export function TransactionItem({ transaction }: Props) {
   const dateFormatted = isToday ? "Aujourd'hui" : transaction.date;
 
   return (
-    <Pressable
-      onLongPress={handleDelete}
-      style={({ pressed }) => [
-        styles.row,
-        {
-          opacity: pressed ? 0.75 : 1,
-        },
-      ]}
-    >
-      {/* Icône circulaire simple Entrée / Sortie */}
-      <View
+    <View style={styles.swipeWrap}>
+      {/* Action révélée au glissement */}
+      <View style={[styles.deleteAction, { backgroundColor: colors.expense }]}>
+        <Pressable
+          onPress={handleDelete}
+          style={styles.deleteBtn}
+          accessibilityRole="button"
+          accessibilityLabel={`Supprimer ${transaction.title}`}
+        >
+          <Ionicons name="trash-outline" size={20} color="#FFFFFF" />
+          <Text style={styles.deleteLabel}>Suppr.</Text>
+        </Pressable>
+      </View>
+
+      <Animated.View
+        {...panResponder.panHandlers}
         style={[
-          styles.iconCircle,
-          {
-            backgroundColor: isIncome
-              ? isDark
-                ? "rgba(52, 211, 153, 0.15)"
-                : "#DCFCE7"
-              : isDark
-              ? "rgba(239, 68, 68, 0.15)"
-              : "#FEE2E2",
-          },
+          styles.row,
+          { backgroundColor: colors.surface, transform: [{ translateX }] },
         ]}
       >
-        <Ionicons
-          name={isIncome ? "arrow-down" : "arrow-up"}
-          size={18}
-          color={isIncome ? (isDark ? "#34D399" : "#059669") : "#EF4444"}
-        />
-      </View>
+        <Pressable onLongPress={handleDelete} delayLongPress={350} style={styles.rowInner}>
+          <View
+            style={[
+              styles.iconCircle,
+              { backgroundColor: isIncome ? colors.incomeLight : colors.expenseLight },
+            ]}
+          >
+            <Ionicons
+              name={isIncome ? "arrow-down" : "arrow-up"}
+              size={18}
+              color={isIncome ? colors.income : colors.expense}
+            />
+          </View>
 
-      {/* Titre et Heure */}
-      <View style={styles.content}>
-        <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
-          {transaction.title}
-        </Text>
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          {dateFormatted} {transaction.time ? `• ${transaction.time}` : ""}
-        </Text>
-      </View>
+          <View style={styles.content}>
+            <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
+              {transaction.title}
+            </Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+              {showDate ? dateFormatted : ""}
+              {showDate && transaction.time ? " • " : ""}
+              {transaction.time ? transaction.time : ""}
+            </Text>
+          </View>
 
-      {/* Montant */}
-      <View style={styles.amountCol}>
-        <Text
-          style={[
-            styles.amount,
-            {
-              color: isIncome
-                ? isDark
-                  ? "#34D399"
-                  : "#059669"
-                : isDark
-                ? "#F87171"
-                : "#DC2626",
-              fontVariant: ["tabular-nums"],
-            },
-          ]}
-        >
-          {isIncome ? "+ " : "- "}
-          {formatCurrency(transaction.amount)}
-        </Text>
-      </View>
-    </Pressable>
+          <View style={styles.amountCol}>
+            <Text
+              style={[
+                styles.amount,
+                { color: isIncome ? colors.income : colors.expense, fontVariant: ["tabular-nums"] },
+              ]}
+            >
+              {isIncome ? "+ " : "- "}
+              {formatCurrency(transaction.amount)}
+            </Text>
+          </View>
+        </Pressable>
+      </Animated.View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  swipeWrap: {
+    position: "relative",
+    justifyContent: "center",
+  },
+  deleteAction: {
+    position: "absolute",
+    right: 0,
+    top: 4,
+    bottom: 4,
+    width: ACTION_WIDTH,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  deleteBtn: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 3,
+    flex: 1,
+    width: "100%",
+  },
+  deleteLabel: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "700",
+  },
   row: {
+    borderRadius: 14,
+  },
+  rowInner: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 13,

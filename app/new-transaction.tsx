@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -9,49 +9,20 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useFinance } from "@/context/FinanceContext";
 import { useTheme } from "@/context/ThemeContext";
+import { DatePickerModal } from "@/components/DatePickerModal";
 import { toISODate, formatAmount } from "@/utils/dateUtils";
 import { TransactionType } from "@/types/finance";
 
 export default function NewTransactionScreen() {
   const router = useRouter();
-  const { isDark, toggleTheme } = useTheme();
+  const { colors } = useTheme();
   const { addTransaction } = useFinance();
-
-  // Thème dual : Forest Obsidian (Sombre) & Forest Wealth (Clair)
-  const theme = useMemo(
-    () => ({
-      bg: isDark ? "#0c1511" : "#f7f9f6",
-      containerLowest: isDark ? "#07100c" : "#ffffff",
-      containerLow: isDark ? "#141d19" : "#ffffff",
-      container: isDark ? "#18221d" : "#f1f5f2",
-      containerHigh: isDark ? "#232c27" : "#e8eee9",
-      primary: isDark ? "#34d399" : "#059669",
-      primaryBright: isDark ? "#5af0b3" : "#047857",
-      primaryLight: isDark ? "rgba(52, 211, 153, 0.15)" : "#ecfdf5",
-      textPrimary: isDark ? "#dbe5de" : "#0d1612",
-      textSecondary: isDark ? "#85948b" : "#64748b",
-      textMuted: isDark ? "#526058" : "#94a3b8",
-      borderSubtle: isDark ? "rgba(255, 255, 255, 0.06)" : "#e2e6df",
-      borderPrimary: isDark ? "rgba(52, 211, 153, 0.28)" : "rgba(5, 150, 105, 0.35)",
-      cardGlow: isDark ? "rgba(52, 211, 153, 0.15)" : "rgba(16, 185, 129, 0.08)",
-      grabber: isDark ? "rgba(255, 255, 255, 0.22)" : "rgba(0, 0, 0, 0.18)",
-      headerBorder: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.06)",
-      segmentedBg: isDark ? "#07100c" : "#f1f5f2",
-      segmentedActiveBg: isDark ? "#232c27" : "#ffffff",
-      segmentedActiveBorder: isDark ? "rgba(255, 255, 255, 0.12)" : "#e2e6df",
-      segmentedActiveText: isDark ? "#ffffff" : "#0d1612",
-      buttonBg: isDark ? "#34d399" : "#059669",
-      buttonText: isDark ? "#07100c" : "#ffffff",
-    }),
-    [isDark]
-  );
 
   const [type, setType] = useState<TransactionType>("expense");
   const [amountValue, setAmountValue] = useState<number>(0);
@@ -61,6 +32,8 @@ export default function NewTransactionScreen() {
   const [dateModalVisible, setDateModalVisible] = useState(false);
 
   const amountInputRef = useRef<TextInput>(null);
+
+  const borderPrimary = colors.tint + "44";
 
   const handleAddQuickAmount = (val: number) => {
     setAmountValue((prev) => prev + val);
@@ -98,58 +71,35 @@ export default function NewTransactionScreen() {
   const handleHelp = () => {
     Alert.alert(
       "Nouvelle transaction",
-      "Saisissez le montant en FCFA de votre opération et indiquez son libellé.",
+      "Saisissez le montant en FCFA, le libellé, puis enregistrez.",
       [{ text: "Compris" }]
-    );
-  };
-
-  const handleToggleRecurring = () => {
-    const next = !isRecurring;
-    setIsRecurring(next);
-    Alert.alert(
-      next ? "Répétition activée" : "Répétition désactivée",
-      next
-        ? "Cette transaction est marquée comme récurrente mensuelle."
-        : "Cette transaction est ponctuelle.",
-      [{ text: "OK" }]
     );
   };
 
   const handleSave = async () => {
     if (amountValue <= 0) {
-      Alert.alert(
-        "Montant manquant",
-        "Veuillez saisir un montant supérieur à 0 FCFA."
-      );
+      Alert.alert("Montant manquant", "Veuillez saisir un montant supérieur à 0 FCFA.");
       amountInputRef.current?.focus();
       return;
     }
 
     if (!title.trim()) {
-      Alert.alert(
-        "Libellé manquant",
-        "Veuillez saisir un libellé ou commerçant pour cette opération."
-      );
+      Alert.alert("Libellé manquant", "Veuillez saisir un libellé ou commerçant pour cette opération.");
       return;
     }
 
     const now = selectedDate;
-    const time = `${String(now.getHours()).padStart(2, "0")}:${String(
-      now.getMinutes()
-    ).padStart(2, "0")}`;
+    const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
     try {
       await addTransaction({
         title: title.trim(),
         amount: amountValue,
         type,
-        categoryId: type === "expense" ? "food" : "salary",
         date: toISODate(now),
         time,
-        paymentMethod: "cash",
         note: isRecurring ? "Transaction récurrente" : undefined,
       });
-
       router.back();
     } catch {
       Alert.alert("Erreur", "Impossible d'enregistrer la transaction.");
@@ -164,8 +114,7 @@ export default function NewTransactionScreen() {
       d.getFullYear() === today.getFullYear();
 
     const monthStr = d.toLocaleDateString("fr-FR", { month: "short" });
-    const capitalizedMonth =
-      monthStr.charAt(0).toUpperCase() + monthStr.slice(1).replace(".", "");
+    const capitalizedMonth = monthStr.charAt(0).toUpperCase() + monthStr.slice(1).replace(".", "");
 
     if (isToday) {
       return `Aujourd'hui, ${d.getDate()} ${capitalizedMonth}`;
@@ -178,71 +127,38 @@ export default function NewTransactionScreen() {
   ).padStart(2, "0")}`;
 
   return (
-    <SafeAreaView edges={["top", "bottom"]} style={[styles.safeArea, { backgroundColor: theme.bg }]}>
+    <SafeAreaView edges={["top", "bottom"]} style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.keyboardContainer}
       >
         {/* Poignée de glissement */}
         <View style={styles.grabberWrapper}>
-          <View style={[styles.grabber, { backgroundColor: theme.grabber }]} />
+          <View style={[styles.grabber, { backgroundColor: colors.border }]} />
         </View>
 
-        {/* En-tête modal : [Annuler] [Nouvelle transaction] [Thème / Aide] */}
-        <View
-          style={[
-            styles.headerRow,
-            { borderBottomColor: theme.headerBorder },
-          ]}
-        >
+        {/* En-tête modal */}
+        <View style={[styles.headerRow, { borderBottomColor: colors.borderSubtle }]}>
           <Pressable
             onPress={() => router.back()}
-            style={({ pressed }) => [
-              styles.headerCancelBtn,
-              { opacity: pressed ? 0.7 : 1 },
-            ]}
+            style={({ pressed }) => [styles.headerCancelBtn, { opacity: pressed ? 0.7 : 1 }]}
             hitSlop={12}
+            accessibilityRole="button"
           >
-            <Text style={[styles.headerCancelText, { color: theme.textSecondary }]}>
-              Annuler
-            </Text>
+            <Text style={[styles.headerCancelText, { color: colors.textSecondary }]}>Annuler</Text>
           </Pressable>
 
-          <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>
-            Nouvelle transaction
-          </Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Nouvelle transaction</Text>
 
-          <View style={styles.headerRightActions}>
-            <Pressable
-              onPress={toggleTheme}
-              style={({ pressed }) => [
-                styles.headerActionBtn,
-                { opacity: pressed ? 0.7 : 1 },
-              ]}
-              hitSlop={8}
-            >
-              <Ionicons
-                name={isDark ? "sunny-outline" : "moon-outline"}
-                size={20}
-                color={theme.textSecondary}
-              />
-            </Pressable>
-
-            <Pressable
-              onPress={handleHelp}
-              style={({ pressed }) => [
-                styles.headerActionBtn,
-                { opacity: pressed ? 0.7 : 1 },
-              ]}
-              hitSlop={8}
-            >
-              <Ionicons
-                name="help-circle-outline"
-                size={22}
-                color={theme.textSecondary}
-              />
-            </Pressable>
-          </View>
+          <Pressable
+            onPress={handleHelp}
+            style={({ pressed }) => [styles.headerActionBtn, { opacity: pressed ? 0.7 : 1 }]}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Aide"
+          >
+            <Ionicons name="help-circle-outline" size={22} color={colors.textSecondary} />
+          </Pressable>
         </View>
 
         <ScrollView
@@ -255,69 +171,38 @@ export default function NewTransactionScreen() {
           <View
             style={[
               styles.segmentedContainer,
-              {
-                backgroundColor: theme.segmentedBg,
-                borderColor: theme.borderSubtle,
-              },
+              { backgroundColor: colors.surfaceSecondary, borderColor: colors.borderSubtle },
             ]}
           >
-            <Pressable
-              onPress={() => setType("expense")}
-              style={[
-                styles.segmentedBtn,
-                type === "expense" && [
-                  styles.segmentedBtnActive,
-                  {
-                    backgroundColor: theme.segmentedActiveBg,
-                    borderColor: theme.segmentedActiveBorder,
-                  },
-                ],
-              ]}
-            >
-              <Text
-                style={[
-                  styles.segmentedBtnText,
-                  {
-                    color:
-                      type === "expense"
-                        ? theme.segmentedActiveText
-                        : theme.textSecondary,
-                    fontWeight: type === "expense" ? "700" : "500",
-                  },
-                ]}
-              >
-                Dépense
-              </Text>
-            </Pressable>
-
-            <Pressable
-              onPress={() => setType("income")}
-              style={[
-                styles.segmentedBtn,
-                type === "income" && [
-                  styles.segmentedBtnActive,
-                  {
-                    backgroundColor: theme.segmentedActiveBg,
-                    borderColor: theme.segmentedActiveBorder,
-                  },
-                ],
-              ]}
-            >
-              <Text
-                style={[
-                  styles.segmentedBtnText,
-                  {
-                    color:
-                      type === "income"
-                        ? theme.segmentedActiveText
-                        : theme.textSecondary,
-                    fontWeight: type === "income" ? "700" : "500",
-                  },
-                ]}
-              >
-                Revenu
-              </Text>
-            </Pressable>
+            {(["expense", "income"] as const).map((t) => {
+              const active = type === t;
+              return (
+                <Pressable
+                  key={t}
+                  onPress={() => setType(t)}
+                  accessibilityRole="button"
+                  style={[
+                    styles.segmentedBtn,
+                    active && [
+                      styles.segmentedBtnActive,
+                      { backgroundColor: colors.surface, borderColor: colors.border },
+                    ],
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.segmentedBtnText,
+                      {
+                        color: active ? colors.text : colors.textSecondary,
+                        fontWeight: active ? "700" : "500",
+                      },
+                    ]}
+                  >
+                    {t === "expense" ? "Dépense" : "Revenu"}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
 
           {/* 2. Carte Hero Montant en FCFA */}
@@ -325,71 +210,38 @@ export default function NewTransactionScreen() {
             style={[
               styles.amountCard,
               {
-                backgroundColor: theme.containerLow,
-                borderColor: theme.borderPrimary,
-                shadowColor: theme.primary,
+                backgroundColor: colors.surface,
+                borderColor: borderPrimary,
+                shadowColor: colors.tint,
               },
             ]}
           >
-            <View
-              style={[styles.glowBlob, { backgroundColor: theme.cardGlow }]}
-              pointerEvents="none"
-            />
+            <View style={[styles.glowBlob, { backgroundColor: colors.tintSoft }]} pointerEvents="none" />
 
             <View style={styles.amountHeaderRow}>
-              <Text style={[styles.amountLabel, { color: theme.textSecondary }]}>
-                MONTANT TOTAL
-              </Text>
+              <Text style={[styles.amountLabel, { color: colors.textSecondary }]}>MONTANT TOTAL</Text>
 
-              {/* Badge devise FCFA */}
-              <View
-                style={[
-                  styles.currencyBadge,
-                  {
-                    backgroundColor: theme.container,
-                    borderColor: theme.borderPrimary,
-                  },
-                ]}
-              >
-                <View
-                  style={[styles.pulsingDot, { backgroundColor: theme.primary }]}
-                />
-                <Text
-                  style={[
-                    styles.currencyBadgeText,
-                    { color: theme.primaryBright },
-                  ]}
-                >
-                  FCFA
-                </Text>
+              <View style={[styles.currencyBadge, { backgroundColor: colors.surfaceSecondary, borderColor: borderPrimary }]}>
+                <View style={[styles.pulsingDot, { backgroundColor: colors.tint }]} />
+                <Text style={[styles.currencyBadgeText, { color: colors.tint }]}>FCFA</Text>
               </View>
             </View>
 
-            {/* Affichage Chiffres Grands Formats */}
             <View style={styles.numericRow}>
-              <Pressable
-                onPress={() => amountInputRef.current?.focus()}
-                style={styles.amountTouchArea}
-              >
+              <Pressable onPress={() => amountInputRef.current?.focus()} style={styles.amountTouchArea}>
                 <Text
                   style={[
                     styles.amountMainDigits,
-                    { color: amountValue === 0 ? theme.textMuted : theme.textPrimary },
+                    { color: amountValue === 0 ? colors.textMuted : colors.text },
                   ]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
                 >
                   {formatAmount(amountValue)}
                 </Text>
-                <Text
-                  style={[
-                    styles.amountCurrencySymbol,
-                    { color: theme.primaryBright },
-                  ]}
-                >
-                  FCFA
-                </Text>
+                <Text style={[styles.amountCurrencySymbol, { color: colors.tint }]}>FCFA</Text>
               </Pressable>
 
-              {/* Saisie clavier invisible liée à l'affichage */}
               <TextInput
                 ref={amountInputRef}
                 value={amountValue === 0 ? "" : amountValue.toString()}
@@ -401,52 +253,32 @@ export default function NewTransactionScreen() {
                 autoFocus
               />
 
-              {/* Bouton Effacer */}
               <Pressable
                 onPress={handleBackspace}
+                accessibilityRole="button"
+                accessibilityLabel="Effacer le dernier chiffre"
                 style={({ pressed }) => [
                   styles.backspaceBtn,
-                  {
-                    backgroundColor: theme.container,
-                    borderColor: theme.borderSubtle,
-                    opacity: pressed ? 0.7 : 1,
-                  },
+                  { backgroundColor: colors.surfaceSecondary, borderColor: colors.borderSubtle, opacity: pressed ? 0.7 : 1 },
                 ]}
                 hitSlop={8}
               >
-                <Ionicons
-                  name="backspace-outline"
-                  size={20}
-                  color={theme.textSecondary}
-                />
+                <Ionicons name="backspace-outline" size={20} color={colors.textSecondary} />
               </Pressable>
             </View>
 
-            {/* Touches rapides d'incrément en FCFA */}
-            <View
-              style={[
-                styles.quickPillsRow,
-                { borderTopColor: theme.headerBorder },
-              ]}
-            >
+            {/* Touches rapides d'incrément */}
+            <View style={[styles.quickPillsRow, { borderTopColor: colors.borderSubtle }]}>
               {[1000, 5000, 10000].map((val) => (
                 <Pressable
                   key={val}
                   onPress={() => handleAddQuickAmount(val)}
                   style={({ pressed }) => [
                     styles.quickPill,
-                    {
-                      backgroundColor: theme.container,
-                      borderColor: theme.borderSubtle,
-                      opacity: pressed ? 0.7 : 1,
-                    },
+                    { backgroundColor: colors.surfaceSecondary, borderColor: colors.borderSubtle, opacity: pressed ? 0.7 : 1 },
                   ]}
                 >
-                  <Text
-                    style={[styles.quickPillText, { color: theme.textPrimary }]}
-                  >
-                    +{formatAmount(val)}
-                  </Text>
+                  <Text style={[styles.quickPillText, { color: colors.text }]}>+{formatAmount(val)}</Text>
                 </Pressable>
               ))}
 
@@ -454,51 +286,30 @@ export default function NewTransactionScreen() {
                 onPress={handleRoundAmount}
                 style={({ pressed }) => [
                   styles.quickPill,
-                  {
-                    backgroundColor: isDark ? theme.container : theme.primaryLight,
-                    borderColor: theme.borderPrimary,
-                    opacity: pressed ? 0.7 : 1,
-                  },
+                  { backgroundColor: colors.tintSoft, borderColor: borderPrimary, opacity: pressed ? 0.7 : 1 },
                 ]}
               >
-                <Text
-                  style={[
-                    styles.quickPillArrondirText,
-                    { color: theme.primaryBright },
-                  ]}
-                >
-                  Arrondir
-                </Text>
+                <Text style={[styles.quickPillArrondirText, { color: colors.tint }]}>Arrondir</Text>
               </Pressable>
             </View>
           </View>
 
           {/* 3. Libellé / Titre & Date */}
           <View style={styles.fieldSection}>
-            <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>
-              LIBELLÉ / TITRE
-            </Text>
-            <View
-              style={[
-                styles.inputContainer,
-                {
-                  backgroundColor: theme.containerLowest,
-                  borderColor: theme.borderSubtle,
-                },
-              ]}
-            >
+            <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>LIBELLÉ / TITRE</Text>
+            <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.borderSubtle }]}>
               <Ionicons
                 name="storefront-outline"
                 size={20}
-                color={theme.textSecondary}
+                color={colors.textSecondary}
                 style={styles.inputLeftIcon}
               />
               <TextInput
                 value={title}
                 onChangeText={setTitle}
                 placeholder="Ex: Déjeuner, Taxi, Supermarché, Salaire..."
-                placeholderTextColor={theme.textMuted}
-                style={[styles.textInputField, { color: theme.textPrimary }]}
+                placeholderTextColor={colors.textMuted}
+                style={[styles.textInputField, { color: colors.text }]}
               />
             </View>
 
@@ -506,49 +317,33 @@ export default function NewTransactionScreen() {
             <View style={styles.dateTimeRow}>
               <Pressable
                 onPress={() => setDateModalVisible(true)}
+                accessibilityRole="button"
                 style={({ pressed }) => [
                   styles.datePillBtn,
-                  {
-                    backgroundColor: theme.containerLowest,
-                    borderColor: theme.borderSubtle,
-                    opacity: pressed ? 0.8 : 1,
-                  },
+                  { backgroundColor: colors.surface, borderColor: colors.borderSubtle, opacity: pressed ? 0.8 : 1 },
                 ]}
               >
                 <View style={styles.datePillLeft}>
-                  <Ionicons
-                    name="calendar-outline"
-                    size={18}
-                    color={theme.primary}
-                  />
-                  <Text
-                    style={[styles.datePillText, { color: theme.textPrimary }]}
-                  >
+                  <Ionicons name="calendar-outline" size={18} color={colors.tint} />
+                  <Text style={[styles.datePillText, { color: colors.text }]}>
                     {getFormattedDateLabel(selectedDate)}
                   </Text>
                 </View>
-                <View
-                  style={[styles.timeBadge, { backgroundColor: theme.container }]}
-                >
-                  <Text
-                    style={[styles.timeBadgeText, { color: theme.textSecondary }]}
-                  >
-                    {currentTimeStr}
-                  </Text>
+                <View style={[styles.timeBadge, { backgroundColor: colors.surfaceSecondary }]}>
+                  <Text style={[styles.timeBadgeText, { color: colors.textSecondary }]}>{currentTimeStr}</Text>
                 </View>
               </Pressable>
 
               <Pressable
-                onPress={handleToggleRecurring}
+                onPress={() => setIsRecurring((v) => !v)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isRecurring }}
+                accessibilityLabel="Marquer comme récurrente"
                 style={({ pressed }) => [
                   styles.repeatBtn,
                   {
-                    backgroundColor: isRecurring
-                      ? theme.container
-                      : theme.containerLowest,
-                    borderColor: isRecurring
-                      ? theme.borderPrimary
-                      : theme.borderSubtle,
+                    backgroundColor: isRecurring ? colors.tintSoft : colors.surface,
+                    borderColor: isRecurring ? borderPrimary : colors.borderSubtle,
                     opacity: pressed ? 0.8 : 1,
                   },
                 ]}
@@ -556,110 +351,42 @@ export default function NewTransactionScreen() {
                 <Ionicons
                   name="repeat"
                   size={20}
-                  color={isRecurring ? theme.primary : theme.textSecondary}
+                  color={isRecurring ? colors.tint : colors.textSecondary}
                 />
               </Pressable>
             </View>
+
+            {isRecurring && (
+              <Text style={[styles.recurringHint, { color: colors.tint }]}>
+                Marqué comme récurrent mensuel
+              </Text>
+            )}
           </View>
         </ScrollView>
 
         {/* Bouton d'enregistrement fixé en bas */}
-        <View
-          style={[
-            styles.bottomCtaBar,
-            {
-              backgroundColor: theme.bg,
-              borderTopColor: theme.headerBorder,
-            },
-          ]}
-        >
+        <View style={[styles.bottomCtaBar, { backgroundColor: colors.background, borderTopColor: colors.borderSubtle }]}>
           <Pressable
             onPress={handleSave}
+            accessibilityRole="button"
             style={({ pressed }) => [
               styles.submitBtn,
-              {
-                backgroundColor: theme.buttonBg,
-                shadowColor: theme.primary,
-                opacity: pressed ? 0.9 : 1,
-              },
+              { backgroundColor: colors.tint, shadowColor: colors.tint, opacity: pressed ? 0.9 : 1 },
             ]}
           >
-            <Ionicons
-              name="checkmark-circle"
-              size={22}
-              color={theme.buttonText}
-            />
-            <Text style={[styles.submitBtnText, { color: theme.buttonText }]}>
+            <Ionicons name="checkmark-circle" size={22} color={colors.onTint} />
+            <Text style={[styles.submitBtnText, { color: colors.onTint }]}>
               Enregistrer {type === "expense" ? "la dépense" : "le revenu"}
             </Text>
           </Pressable>
         </View>
 
-        {/* Modal de sélection de date rapide */}
-        <Modal
+        <DatePickerModal
           visible={dateModalVisible}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setDateModalVisible(false)}
-        >
-          <Pressable
-            style={styles.modalOverlay}
-            onPress={() => setDateModalVisible(false)}
-          >
-            <View
-              style={[
-                styles.datePickerSheet,
-                {
-                  backgroundColor: theme.containerLowest,
-                  borderColor: theme.borderSubtle,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.datePickerSheetTitle,
-                  { color: theme.textPrimary },
-                ]}
-              >
-                Choisir la date
-              </Text>
-              {[
-                { label: "Aujourd'hui", offset: 0 },
-                { label: "Hier", offset: -1 },
-                { label: "Avant-hier", offset: -2 },
-                { label: "Il y a 3 jours", offset: -3 },
-              ].map((item) => (
-                <Pressable
-                  key={item.label}
-                  onPress={() => {
-                    const d = new Date();
-                    d.setDate(d.getDate() + item.offset);
-                    setSelectedDate(d);
-                    setDateModalVisible(false);
-                  }}
-                  style={[
-                    styles.dateOptionRow,
-                    { backgroundColor: theme.container },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.dateOptionText,
-                      { color: theme.textPrimary },
-                    ]}
-                  >
-                    {item.label}
-                  </Text>
-                  <Ionicons
-                    name="chevron-forward"
-                    size={18}
-                    color={theme.textSecondary}
-                  />
-                </Pressable>
-              ))}
-            </View>
-          </Pressable>
-        </Modal>
+          value={selectedDate}
+          onClose={() => setDateModalVisible(false)}
+          onSelect={setSelectedDate}
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -702,11 +429,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
     letterSpacing: -0.3,
-  },
-  headerRightActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
   },
   headerActionBtn: {
     padding: 6,
@@ -920,6 +642,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  recurringHint: {
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 2,
+  },
   bottomCtaBar: {
     paddingHorizontal: 16,
     paddingTop: 10,
@@ -941,38 +668,5 @@ const styles = StyleSheet.create({
   submitBtnText: {
     fontSize: 16,
     fontWeight: "800",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  datePickerSheet: {
-    width: "100%",
-    maxWidth: 320,
-    borderRadius: 20,
-    borderWidth: 1,
-    padding: 18,
-    gap: 10,
-  },
-  datePickerSheetTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: 6,
-    textAlign: "center",
-  },
-  dateOptionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-  },
-  dateOptionText: {
-    fontSize: 14,
-    fontWeight: "600",
   },
 });

@@ -1,14 +1,38 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import Svg, { Circle, G } from "react-native-svg";
+import Svg, { Path, Circle } from "react-native-svg";
 import { useFinance } from "@/context/FinanceContext";
-import { useTheme } from "@/context/ThemeContext";
 import { Palette } from "@/constants/Colors";
 import { formatCurrency } from "@/utils/dateUtils";
 
+// Couleurs sémantiques conformes au Design System "Forest Sanctuary & Obsidian Vault"
+const INCOME_COLOR = Palette.mintElectric; // #34D399 - Vert Émeraude / Menthe vivante
+const EXPENSE_COLOR = "#FA5C65"; // #FA5C65 - Rouge Corail / Carmin chaud
+const BADGE_TEXT_COLOR = Palette.pineDeep; // #0D2E22 - Encre forêt profonde à contraste élevé
+
+/**
+ * Calcule le tracé SVG d'un secteur de camembert
+ */
+function describeArc(
+  cx: number,
+  cy: number,
+  r: number,
+  startAngle: number,
+  endAngle: number
+): string {
+  const startX = cx + r * Math.cos(startAngle);
+  const startY = cy + r * Math.sin(startAngle);
+  const endX = cx + r * Math.cos(endAngle);
+  const endY = cy + r * Math.sin(endAngle);
+
+  const angleDiff = endAngle - startAngle;
+  const largeArcFlag = angleDiff > Math.PI ? 1 : 0;
+
+  return `M ${cx} ${cy} L ${startX} ${startY} A ${r} ${r} 0 ${largeArcFlag} 1 ${endX} ${endY} Z`;
+}
+
 export function BalanceCard() {
-  const { colors, isDark } = useTheme();
   const { periodSummary, timeFrame } = useFinance();
   const [isBalanceHidden, setIsBalanceHidden] = useState(false);
 
@@ -20,17 +44,32 @@ export function BalanceCard() {
   const totalExpense = periodSummary.totalExpense;
   const totalVolume = totalIncome + totalExpense;
 
-  // Calcul des proportions pour le cercle Entrées / Sorties
-  const incomeRatio = totalVolume > 0 ? totalIncome / totalVolume : 0.5;
-  const expenseRatio = totalVolume > 0 ? totalExpense / totalVolume : 0.5;
+  // Proportions
+  const incomeRatio = totalVolume > 0 ? totalIncome / totalVolume : 0;
+  const expenseRatio = totalVolume > 0 ? totalExpense / totalVolume : 0;
 
-  const size = 76;
-  const strokeWidth = 8;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
+  const incomePercent = (incomeRatio * 100).toFixed(1);
+  const expensePercent = (expenseRatio * 100).toFixed(1);
 
-  const incomeDash = totalVolume > 0 ? incomeRatio * circumference : 0;
-  const expenseDash = totalVolume > 0 ? expenseRatio * circumference : 0;
+  // Dimensions du camembert
+  const size = 84;
+  const cx = size / 2;
+  const cy = size / 2;
+  const r = 40;
+  const badgeRadius = r * 0.58;
+
+  // Calcul des angles et positions des badges
+  // Le vert menthe (Entrées) commence à 0 (3h) et va jusqu'à incomeAngle dans le sens horaire
+  // Le rouge corail (Sorties) complète le reste
+  const incomeAngle = incomeRatio * 2 * Math.PI;
+
+  const incomeMidAngle = incomeAngle / 2;
+  const incomeBadgeX = cx + badgeRadius * Math.cos(incomeMidAngle);
+  const incomeBadgeY = cy + badgeRadius * Math.sin(incomeMidAngle);
+
+  const expenseMidAngle = incomeAngle + (2 * Math.PI - incomeAngle) / 2;
+  const expenseBadgeX = cx + badgeRadius * Math.cos(expenseMidAngle);
+  const expenseBadgeY = cy + badgeRadius * Math.sin(expenseMidAngle);
 
   const periodLabelMap = {
     day: "aujourd'hui",
@@ -56,7 +95,7 @@ export function BalanceCard() {
             <Ionicons
               name={isBalanceHidden ? "eye-off-outline" : "eye-outline"}
               size={18}
-              color="#A7F3D0"
+              color={Palette.mintPale}
             />
           </Pressable>
         </View>
@@ -66,7 +105,7 @@ export function BalanceCard() {
           <Ionicons
             name={periodSummary.netBalance >= 0 ? "trending-up" : "trending-down"}
             size={13}
-            color={periodSummary.netBalance >= 0 ? Palette.mintElectric : "#F87171"}
+            color={periodSummary.netBalance >= 0 ? Palette.mintElectric : EXPENSE_COLOR}
           />
           <Text
             style={[
@@ -75,7 +114,7 @@ export function BalanceCard() {
                 color:
                   periodSummary.netBalance >= 0
                     ? Palette.mintElectric
-                    : "#F87171",
+                    : EXPENSE_COLOR,
               },
             ]}
           >
@@ -84,7 +123,7 @@ export function BalanceCard() {
         </View>
       </View>
 
-      {/* Ligne Centrale : Solde Grand Format + Cercle SVG Entrées/Sorties */}
+      {/* Ligne Centrale : Solde Grand Format + Camembert SVG avec badges de pourcentage */}
       <View style={styles.middleRow}>
         <View style={styles.balanceCol}>
           <Text
@@ -99,74 +138,83 @@ export function BalanceCard() {
           </Text>
         </View>
 
-        {/* Cercle exprimant les Entrées (Vert) et Sorties (Rouge) */}
-        <View style={styles.circleWrapper}>
-          <Svg width={size} height={size}>
-            <G rotation="-90" origin={`${size / 2}, ${size / 2}`}>
-              {/* Piste de fond */}
-              <Circle
-                cx={size / 2}
-                cy={size / 2}
-                r={radius}
-                stroke="rgba(255, 255, 255, 0.12)"
-                strokeWidth={strokeWidth}
-                fill="transparent"
-              />
-
-              {totalVolume > 0 ? (
-                <>
-                  {/* Arc des Entrées (Vert émeraude) */}
-                  {totalIncome > 0 && (
-                    <Circle
-                      cx={size / 2}
-                      cy={size / 2}
-                      r={radius}
-                      stroke={Palette.mintElectric}
-                      strokeWidth={strokeWidth}
-                      strokeDasharray={`${incomeDash} ${circumference}`}
-                      strokeDashoffset={0}
-                      strokeLinecap={totalExpense > 0 ? "round" : "butt"}
-                      fill="transparent"
+        {/* Camembert compact 2D Entrées (Menthe) / Sorties (Corail) avec pilules % */}
+        <View style={styles.chartWrapper}>
+          {totalVolume === 0 ? (
+            <View style={styles.emptyCircle}>
+              <Ionicons name="swap-vertical" size={16} color="rgba(255, 255, 255, 0.4)" />
+            </View>
+          ) : (
+            <View style={{ width: size, height: size, position: "relative" }}>
+              <Svg width={size} height={size}>
+                {expenseRatio >= 0.999 ? (
+                  <Circle cx={cx} cy={cy} r={r} fill={EXPENSE_COLOR} />
+                ) : incomeRatio >= 0.999 ? (
+                  <Circle cx={cx} cy={cy} r={r} fill={INCOME_COLOR} />
+                ) : (
+                  <>
+                    {/* Tranche Entrées (Vert Émeraude / Menthe) */}
+                    <Path
+                      d={describeArc(cx, cy, r, 0, incomeAngle)}
+                      fill={INCOME_COLOR}
                     />
-                  )}
-                  {/* Arc des Sorties (Rouge corail) */}
-                  {totalExpense > 0 && (
-                    <Circle
-                      cx={size / 2}
-                      cy={size / 2}
-                      r={radius}
-                      stroke="#F87171"
-                      strokeWidth={strokeWidth}
-                      strokeDasharray={`${expenseDash} ${circumference}`}
-                      strokeDashoffset={-incomeDash}
-                      strokeLinecap={totalIncome > 0 ? "round" : "butt"}
-                      fill="transparent"
+                    {/* Tranche Sorties (Rouge Corail) */}
+                    <Path
+                      d={describeArc(cx, cy, r, incomeAngle, 2 * Math.PI)}
+                      fill={EXPENSE_COLOR}
                     />
-                  )}
-                </>
-              ) : null}
-            </G>
-          </Svg>
+                  </>
+                )}
+              </Svg>
 
-          {/* Icône au centre du cercle */}
-          <View style={styles.circleCenter} pointerEvents="none">
-            <Ionicons
-              name="swap-vertical"
-              size={18}
-              color={Palette.mintPale}
-            />
-          </View>
+              {/* Badge Sorties (% blanc avec chiffre foncé gras) */}
+              {expenseRatio >= 0.12 && (
+                <View
+                  pointerEvents="none"
+                  style={[
+                    styles.badgeWrapper,
+                    {
+                      left: expenseRatio >= 0.999 ? cx : expenseBadgeX,
+                      top: expenseRatio >= 0.999 ? cy : expenseBadgeY,
+                    },
+                  ]}
+                >
+                  <View style={styles.pillBadge}>
+                    <Text style={styles.pillBadgeText}>{expensePercent}%</Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Badge Entrées (% blanc avec chiffre foncé gras) */}
+              {incomeRatio >= 0.12 && (
+                <View
+                  pointerEvents="none"
+                  style={[
+                    styles.badgeWrapper,
+                    {
+                      left: incomeRatio >= 0.999 ? cx : incomeBadgeX,
+                      top: incomeRatio >= 0.999 ? cy : incomeBadgeY,
+                    },
+                  ]}
+                >
+                  <View style={styles.pillBadge}>
+                    <Text style={styles.pillBadgeText}>{incomePercent}%</Text>
+                  </View>
+                </View>
+              )}
+            </View>
+          )}
         </View>
       </View>
 
-      {/* Ligne inférieure : Sous-totaux Entrées vs Sorties */}
+      {/* Ligne inférieure : Sous-totaux Entrées (Menthe) vs Sorties (Corail) */}
       <View style={styles.bottomRow}>
         <View style={styles.flowCol}>
           <View style={styles.flowHeader}>
-            <View style={[styles.flowDot, { backgroundColor: "#34D399" }]} />
+            <View style={[styles.flowDot, { backgroundColor: INCOME_COLOR }]} />
             <Text style={styles.flowLabel}>Entrées</Text>
           </View>
-          <Text style={[styles.flowAmount, { color: "#34D399" }]}>
+          <Text style={[styles.flowAmount, { color: INCOME_COLOR }]}>
             +{formatCurrency(totalIncome)}
           </Text>
         </View>
@@ -175,10 +223,10 @@ export function BalanceCard() {
 
         <View style={styles.flowCol}>
           <View style={styles.flowHeader}>
-            <View style={[styles.flowDot, { backgroundColor: "#F87171" }]} />
+            <View style={[styles.flowDot, { backgroundColor: EXPENSE_COLOR }]} />
             <Text style={styles.flowLabel}>Sorties</Text>
           </View>
-          <Text style={[styles.flowAmount, { color: "#FCA5A5" }]}>
+          <Text style={[styles.flowAmount, { color: "#FFA6AC" }]}>
             -{formatCurrency(totalExpense)}
           </Text>
         </View>
@@ -267,17 +315,47 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: "rgba(255, 255, 255, 0.6)",
   },
-  circleWrapper: {
+  chartWrapper: {
+    width: 84,
+    height: 84,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyCircle: {
     width: 76,
     height: 76,
+    borderRadius: 38,
+    borderWidth: 1.5,
+    borderStyle: "dashed",
+    borderColor: "rgba(255, 255, 255, 0.2)",
     alignItems: "center",
     justifyContent: "center",
-    position: "relative",
   },
-  circleCenter: {
+  badgeWrapper: {
     position: "absolute",
+    width: 0,
+    height: 0,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "visible",
+  },
+  pillBadge: {
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 5,
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 1.5 },
+    shadowOpacity: 0.25,
+    shadowRadius: 2.5,
+    elevation: 3,
+  },
+  pillBadgeText: {
+    color: BADGE_TEXT_COLOR,
+    fontSize: 9.5,
+    fontWeight: "800",
+    fontVariant: ["tabular-nums"],
+    letterSpacing: -0.3,
   },
   bottomRow: {
     flexDirection: "row",

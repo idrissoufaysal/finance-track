@@ -42,13 +42,14 @@ export function PeriodSelector() {
             <Pressable
               key={opt.key}
               onPress={() => setTimeFrame(opt.key)}
+              accessibilityRole="button"
               style={[
                 styles.segmentItem,
                 isActive && [
                   styles.segmentItemActive,
                   {
-                    backgroundColor: isDark ? "#232C27" : "#FFFFFF",
-                    borderColor: isDark ? "rgba(52, 211, 153, 0.3)" : colors.border,
+                    backgroundColor: colors.surface,
+                    borderColor: isDark ? colors.tint + "4D" : colors.border,
                   },
                 ],
               ]}
@@ -57,11 +58,7 @@ export function PeriodSelector() {
                 style={[
                   styles.segmentLabel,
                   {
-                    color: isActive
-                      ? isDark
-                        ? "#34D399"
-                        : "#059669"
-                      : colors.textSecondary,
+                    color: isActive ? colors.tint : colors.textSecondary,
                     fontWeight: isActive ? "700" : "500",
                   },
                 ]}
@@ -98,7 +95,7 @@ export function PeriodSelector() {
           {!isCurrent && (
             <View style={[styles.todayBadge, { backgroundColor: colors.tint + "20" }]}>
               <Text style={[styles.todayBadgeText, { color: colors.tint }]}>
-                Aujourd'hui
+                {"Aujourd'hui"}
               </Text>
             </View>
           )}
@@ -106,17 +103,25 @@ export function PeriodSelector() {
 
         <Pressable
           onPress={goToNext}
+          disabled={isCurrent}
+          accessibilityRole="button"
+          accessibilityLabel="Période suivante"
+          accessibilityState={{ disabled: isCurrent }}
           style={({ pressed }) => [
             styles.navArrow,
             {
               backgroundColor: colors.surfaceSecondary,
               borderColor: colors.border,
-              opacity: pressed ? 0.6 : 1,
+              opacity: isCurrent ? 0.35 : pressed ? 0.6 : 1,
             },
           ]}
           hitSlop={8}
         >
-          <Ionicons name="chevron-forward" size={16} color={colors.text} />
+          <Ionicons
+            name="chevron-forward"
+            size={16}
+            color={isCurrent ? colors.textSecondary : colors.text}
+          />
         </Pressable>
       </View>
     </View>

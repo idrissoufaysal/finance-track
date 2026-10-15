@@ -9,34 +9,21 @@
 ### 1. 📅 Vues Temporelles Dédiées
 - **Jour par Jour (Daily)** : Suivi détaillé des dépenses et revenus de la journée, transactions horodatées, indicateur d'évolution sur les 7 jours glissants.
 - **Semaine par Semaine (Weekly)** : Synthèse hebdomadaire avec un graphique en barres des 7 jours (Lundi au Dimanche), mettant en avant le jour le plus dépensier et les tendances de consommation.
-- **Par Mois (Monthly)** : Vue d'ensemble du mois en cours, répartition par tranche de semaine, suivi du rythme d'épargne et comparaison avec les plafonds budgétaires.
+- **Par Mois (Monthly)** : Vue d'ensemble du mois en cours, répartition par tranche de semaine et suivi du rythme d'épargne.
 - **Navigation Temporelle Intuitive** : Précédent / Suivant et bouton de retour rapide vers la période actuelle (*"Aujourd'hui"*, *"Cette semaine"*, *"Ce mois-ci"*).
 
 ### 2. 💳 Gestion Complète des Transactions
-- Ajout ultra-rapide de transactions (Dépense / Revenu).
+- Ajout ultra-rapide de transactions (Dépense / Revenu) depuis le bouton central `+`.
 - Saisie du montant en grands chiffres lisibles avec devise (FCFA).
-- Attribution par **catégorie** (Alimentation, Transports, Logement, Loisirs, Santé, Salaire, Freelance, etc.) avec icônes et codes couleurs harmonisés.
-- Moyen de paiement (Carte bancaire, Apple Pay, Espèces, Virement).
-- Suppression facile avec boîte de confirmation.
+- Sélecteur de date via un calendrier mensuel natif (`DatePickerModal`).
+- Option de récurrence mensuelle (marquée visuellement).
+- **Suppression au glissement** (swipe) avec confirmation, ou appui long.
 
-### 3. 📊 Analyses & Statistiques Détaillées
-- **Solde net**, Total Entrées (+) et Total Sorties (-).
-- **Taux d'épargne calculé en temps réel**.
-- **Répartition par catégorie** avec barres de progression et pourcentages.
-- Moyenne des dépenses journalières et identification de la dépense maximale.
-
-### 4. 🎯 Budgets Mensuels par Catégorie
-- Définition de plafonds de dépenses pour chaque catégorie.
-- Jauges de progression dynamiques avec code couleur d'alerte :
-  - 🟢 **Vert** : Moins de 75% du budget consommé.
-  - 🟡 **Ambre** : Entre 75% et 100% (attention au budget).
-  - 🔴 **Rouge** : Dépassement de budget.
-- Calcul automatique du restant à dépenser.
-
-### 5. 💾 Persistance Hors-Ligne & Données de Démo
-- Données persistées localement via `@react-native-async-storage/async-storage`.
-- Jeu de données réaliste pré-généré au premier lancement (permettant de tester immédiatement les vues jour, semaine et mois).
-- Bouton de réinitialisation des données de démo disponible dans l'onglet *Budgets*.
+### 3. 💾 Persistance Hors-Ligne & Données de Démo
+- Données persistées localement : **SQLite** (`expo-sqlite`) sur mobile, **AsyncStorage** sur le web.
+- Écran de premier lancement (**Onboarding**) avec CTA unique.
+- Jeu de données réaliste de démo pré-généré à la demande (permettant de tester immédiatement les vues jour, semaine et mois).
+- Bouton de réinitialisation (zero-baseline / données de démo) disponible dans les réglages.
 
 ---
 
@@ -46,31 +33,32 @@
 finance-track/
 ├── app/
 │   ├── (tabs)/
-│   │   ├── _layout.tsx         # Navigation par onglets (Dashboard, Historique, Analyses, Budgets)
+│   │   ├── _layout.tsx         # Barre d'onglets flottante + FAB central
 │   │   ├── index.tsx           # Tableau de bord (Solde, Graphique, Périodes, Dernières opérations)
-│   │   ├── transactions.tsx    # Historique complet avec recherche & filtres
-│   │   ├── analytics.tsx       # Graphiques & rapports comparatifs détaillés
-│   │   └── budgets.tsx         # Suivi des plafonds budgétaires mensuels
-│   ├── _layout.tsx             # Root layout avec FinanceProvider & Modal Stack
+│   │   └── transactions.tsx    # Historique complet avec recherche & filtres
+│   ├── _layout.tsx             # Root layout (ThemeProvider, FinanceProvider, gate onboarding)
+│   ├── onboarding.tsx          # Écran de bienvenue (premier lancement)
 │   └── new-transaction.tsx     # Modal de création rapide de transaction
 │
 ├── components/
 │   ├── BalanceCard.tsx         # Carte de solde net & flux entrées/sorties
-│   ├── CategoryBreakdownCard.tsx # Répartition par catégories & barres de progression
+│   ├── DatePickerModal.tsx     # Calendrier mensuel natif (sélection de date)
 │   ├── EmptyState.tsx          # Composant d'état vide avec CTA
 │   ├── FinanceChart.tsx        # Graphique interactif adapté à la période (Jour/Semaine/Mois)
 │   ├── PeriodSelector.tsx      # Sélecteur à 3 volets (Jour / Semaine / Mois) + navigation
-│   └── TransactionItem.tsx     # Ligne de transaction stylisée
+│   └── TransactionItem.tsx     # Ligne de transaction (swipe-to-delete)
 │
 ├── constants/
-│   ├── Colors.ts               # Palette sémantique (Mode sombre & clair)
-│   └── categories.ts           # Définitions des catégories de revenus et dépenses
+│   └── Colors.ts               # Palette sémantique unifiée (tokens clair & sombre)
 │
 ├── context/
-│   └── FinanceContext.tsx      # Gestionnaire d'état central & calculs de périodes
+│   ├── FinanceContext.tsx      # Gestionnaire d'état central & calculs de périodes
+│   └── ThemeContext.tsx        # Thème clair/sombre (source de vérité unique)
 │
 ├── services/
-│   └── storage.ts              # Sauvegarde locale & générateur de données de démo
+│   ├── storage.ts              # Persistance native (SQLite) + générateur de données de démo
+│   ├── storage.web.ts          # Persistance web (AsyncStorage)
+│   └── storageShared.ts        # Types & helpers partagés entre plateformes
 │
 ├── types/
 │   └── finance.ts              # Définitions TypeScript complètes
@@ -86,6 +74,7 @@ finance-track/
 ### Prérequis
 - Node.js >= 18
 - Application mobile **Expo Go** sur votre smartphone (iOS ou Android), ou un simulateur/émulateur configuré.
+- Note : le stockage natif utilise `expo-sqlite`. Pour un build avec modules natifs, utilisez un development build (`npx expo run:ios|android` ou `eas build --profile development`).
 
 ### 1. Démarrer le serveur de développement Expo
 
@@ -100,8 +89,9 @@ npm run start
 - **Sur émulateur Android** : Appuyez sur la touche `a` dans le terminal.
 - **Sur navigateur Web** : Appuyez sur la touche `w` dans le terminal.
 
-### 3. Vérification des types TypeScript
+### 3. Vérifications (types & lint)
 
 ```bash
 npm run typecheck
+npm run lint
 ```

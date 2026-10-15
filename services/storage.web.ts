@@ -1,8 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Transaction, Budget } from '@/types/finance';
-import { DEFAULT_BUDGETS, generateDemoTransactions } from './storageShared';
+import { Transaction } from '@/types/finance';
+import { generateDemoTransactions } from './storageShared';
 
-export { DEFAULT_BUDGETS, generateDemoTransactions } from './storageShared';
+export { generateDemoTransactions } from './storageShared';
 
 /**
  * Web fallback storage (AsyncStorage → localStorage).
@@ -10,8 +10,7 @@ export { DEFAULT_BUDGETS, generateDemoTransactions } from './storageShared';
  * preview keeps this lightweight implementation. Same API as `storage.ts`.
  */
 
-const STORAGE_KEY_TRANSACTIONS = '@finance_track_transactions_v2';
-const STORAGE_KEY_BUDGETS = '@finance_track_budgets_v2';
+const STORAGE_KEY_TRANSACTIONS = '@finance_track_transactions_v3';
 
 async function readArray<T>(key: string): Promise<T[] | null> {
   try {
@@ -64,30 +63,10 @@ export async function clearAllTransactions(): Promise<Transaction[]> {
   return [];
 }
 
-/* --------------------------------- Budgets -------------------------------- */
-
-export async function loadBudgets(): Promise<Budget[]> {
-  const stored = await readArray<Budget>(STORAGE_KEY_BUDGETS);
-  if (stored) return stored;
-  await writeArray(STORAGE_KEY_BUDGETS, DEFAULT_BUDGETS);
-  return DEFAULT_BUDGETS;
-}
-
-export async function upsertBudget(categoryId: string, monthlyLimit: number): Promise<void> {
-  const all = await loadBudgets();
-  const exists = all.some((b) => b.categoryId === categoryId);
-  const updated = exists
-    ? all.map((b) => (b.categoryId === categoryId ? { ...b, monthlyLimit } : b))
-    : [...all, { categoryId, monthlyLimit }];
-  await writeArray(STORAGE_KEY_BUDGETS, updated);
-}
-
 /* ---------------------------------- Demo ---------------------------------- */
 
-export async function resetStorageToDemo(): Promise<{ transactions: Transaction[]; budgets: Budget[] }> {
+export async function resetStorageToDemo(): Promise<{ transactions: Transaction[] }> {
   const transactions = generateDemoTransactions();
-  const budgets = DEFAULT_BUDGETS;
   await writeArray(STORAGE_KEY_TRANSACTIONS, transactions);
-  await writeArray(STORAGE_KEY_BUDGETS, budgets);
-  return { transactions, budgets };
+  return { transactions };
 }

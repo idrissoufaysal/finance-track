@@ -1,13 +1,6 @@
 import { SafeAreaView } from "react-native-safe-area-context";
 import React, { useState, useMemo } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TextInput,
-  Pressable,
-} from "react-native";
+import { View, Text, StyleSheet, ScrollView, TextInput, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useFinance } from "@/context/FinanceContext";
@@ -15,7 +8,6 @@ import { useTheme } from "@/context/ThemeContext";
 import { PeriodSelector } from "@/components/PeriodSelector";
 import { TransactionItem } from "@/components/TransactionItem";
 import { EmptyState } from "@/components/EmptyState";
-import { Palette } from "@/constants/Colors";
 import { formatCurrency } from "@/utils/dateUtils";
 
 export default function TransactionsScreen() {
@@ -28,9 +20,7 @@ export default function TransactionsScreen() {
 
   const displayedTransactions = useMemo(() => {
     return filteredTransactions.filter((tx) => {
-      // Filtre de type
       if (typeFilter !== "all" && tx.type !== typeFilter) return false;
-      // Recherche textuelle
       if (search.trim()) {
         const query = search.toLowerCase();
         const matchTitle = tx.title.toLowerCase().includes(query);
@@ -55,19 +45,18 @@ export default function TransactionsScreen() {
             style={[styles.searchInput, { color: colors.text }]}
           />
           {search.length > 0 && (
-            <Pressable onPress={() => setSearch("")} hitSlop={8}>
+            <Pressable onPress={() => setSearch("")} hitSlop={8} accessibilityRole="button" accessibilityLabel="Effacer la recherche">
               <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
             </Pressable>
           )}
         </View>
 
-        {/* Bascule de Thème Rapide */}
         <Pressable
           onPress={toggleTheme}
           accessibilityRole="button"
           accessibilityLabel="Changer de thème"
           style={({ pressed }) => [
-            styles.themeToggleBtn,
+            styles.squareBtn,
             {
               backgroundColor: colors.surfaceSecondary,
               borderColor: colors.border,
@@ -75,21 +64,19 @@ export default function TransactionsScreen() {
             },
           ]}
         >
-          <Ionicons
-            name={isDark ? "sunny-outline" : "moon-outline"}
-            size={18}
-            color={isDark ? "#f59e0b" : colors.text}
-          />
+          <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={18} color={colors.text} />
         </Pressable>
 
         <Pressable
           onPress={() => router.push("/new-transaction")}
+          accessibilityRole="button"
+          accessibilityLabel="Nouvelle transaction"
           style={({ pressed }) => [
-            styles.plusBtn,
-            { backgroundColor: isDark ? Palette.mintElectric : "#059669", opacity: pressed ? 0.8 : 1 },
+            styles.squareBtn,
+            { backgroundColor: colors.tint, opacity: pressed ? 0.8 : 1 },
           ]}
         >
-          <Ionicons name="add" size={22} color={isDark ? Palette.obsidianBg : "#FFFFFF"} />
+          <Ionicons name="add" size={22} color={colors.onTint} />
         </Pressable>
       </View>
 
@@ -98,7 +85,6 @@ export default function TransactionsScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Sélecteur de période (Aujourd'hui / Semaine / Mois / Année) */}
         <PeriodSelector />
 
         {/* Filtres de Type : Toutes | Dépenses | Revenus */}
@@ -110,26 +96,17 @@ export default function TransactionsScreen() {
               <Pressable
                 key={t}
                 onPress={() => setTypeFilter(t)}
+                accessibilityRole="button"
                 style={[
                   styles.filterPill,
-                  {
-                    backgroundColor: isActive
-                      ? isDark
-                        ? "#34D399"
-                        : "#059669"
-                      : colors.surfaceSecondary,
-                  },
+                  { backgroundColor: isActive ? colors.tint : colors.surfaceSecondary },
                 ]}
               >
                 <Text
                   style={[
                     styles.filterPillText,
                     {
-                      color: isActive
-                        ? isDark
-                          ? "#07100C"
-                          : "#FFFFFF"
-                        : colors.textSecondary,
+                      color: isActive ? colors.onTint : colors.textSecondary,
                       fontWeight: isActive ? "700" : "500",
                     },
                   ]}
@@ -153,22 +130,13 @@ export default function TransactionsScreen() {
           </Text>
         </View>
 
-        {/* Liste des opérations sans catégories superflues */}
         {displayedTransactions.length === 0 ? (
           <EmptyState
             title="Aucun résultat"
             subtitle="Modifiez vos critères ou enregistrez une nouvelle opération."
           />
         ) : (
-          <View
-            style={[
-              styles.listCard,
-              {
-                backgroundColor: colors.card,
-                borderColor: colors.border,
-              },
-            ]}
-          >
+          <View style={[styles.listCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             {displayedTransactions.map((tx) => (
               <TransactionItem key={tx.id} transaction={tx} showDate={true} />
             ))}
@@ -206,20 +174,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     paddingVertical: 0,
   },
-  themeToggleBtn: {
+  squareBtn: {
     width: 42,
     height: 42,
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-  },
-  plusBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
   },
   scroll: {
     flex: 1,

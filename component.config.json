@@ -1,0 +1,17 @@
+{
+  "$schema": "https://reacticx.com/schema/component.config.json",
+  "outDir": "components/ui",
+  "structure": "flat",
+  "aliases": {
+    "components": "@/components/ui",
+    "utils": "@/utils",
+    "hooks": "@/hooks"
+  },
+  "paths": {
+    "utils": "utils",
+    "hooks": "hooks",
+    "types": "types",
+    "examples": "components/ui/examples"
+  },
+  "installDependencies": "never"
+}

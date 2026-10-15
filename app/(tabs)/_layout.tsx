@@ -1,190 +1,203 @@
-import React from "react";
-import { View, Text, StyleSheet, Pressable, Platform } from "react-native";
+import React, { useEffect } from "react";
+import { View, StyleSheet, Pressable, Platform } from "react-native";
 import { Tabs, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  withSequence,
+  interpolateColor,
+  Easing,
+} from "react-native-reanimated";
 import { useTheme } from "@/context/ThemeContext";
 
-export default function TabLayout() {
+const TAB_ICON_SIZE = 22;
+const SPRING = { damping: 18, stiffness: 220, mass: 0.8 };
+
+function TabBarItem({
+  focused,
+  icon,
+  label,
+}: {
+  focused: boolean;
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+}) {
   const { colors, isDark } = useTheme();
+  const progress = useSharedValue(focused ? 1 : 0);
+  const iconScale = useSharedValue(1);
+
+  useEffect(() => {
+    progress.value = withSpring(focused ? 1 : 0, SPRING);
+    if (focused) {
+      iconScale.value = withSequence(
+        withTiming(0.86, { duration: 90 }),
+        withSpring(1.14, { damping: 10, stiffness: 280 }),
+        withSpring(1, { damping: 16, stiffness: 220 })
+      );
+    } else {
+      iconScale.value = withSpring(1, SPRING);
+    }
+  }, [focused, progress, iconScale]);
+
+  const pillStyle = useAnimatedStyle(() => ({
+    opacity: progress.value,
+    transform: [{ scale: 0.88 + progress.value * 0.12 }],
+  }));
+
+  const iconBounceStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: iconScale.value }],
+  }));
+
+  const outlineStyle = useAnimatedStyle(() => ({ opacity: 1 - progress.value }));
+  const filledStyle = useAnimatedStyle(() => ({ opacity: progress.value }));
+
+  const labelStyle = useAnimatedStyle(() => ({
+    color: interpolateColor(
+      progress.value,
+      [0, 1],
+      [colors.textSecondary, colors.tint]
+    ),
+  }));
+
+  return (
+    <View style={styles.tabItemWrap}>
+      <Animated.View
+        style={[
+          styles.activePill,
+          {
+            backgroundColor: isDark
+              ? "rgba(52, 211, 153, 0.16)"
+              : colors.surfaceSecondary,
+          },
+          pillStyle,
+        ]}
+      />
+      <Animated.View style={[styles.iconStack, iconBounceStyle]}>
+        <Animated.View style={[styles.iconLayer, outlineStyle]}>
+          <Ionicons
+            name={`${icon}-outline` as keyof typeof Ionicons.glyphMap}
+            size={TAB_ICON_SIZE}
+            color={colors.textSecondary}
+          />
+        </Animated.View>
+        <Animated.View style={[styles.iconLayer, filledStyle]}>
+          <Ionicons name={icon} size={TAB_ICON_SIZE} color={colors.tint} />
+        </Animated.View>
+      </Animated.View>
+      <Animated.Text style={[styles.tabLabel, labelStyle]} numberOfLines={1}>
+        {label}
+      </Animated.Text>
+    </View>
+  );
+}
+
+function FloatingActionButton({ onPress }: { onPress: () => void }) {
+  const { colors } = useTheme();
+  const pressed = useSharedValue(0);
+
+  const buttonStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 - pressed.value * 0.08 }],
+  }));
+
+  return (
+    <View style={styles.floatingCenterWrap}>
+      <View style={[styles.fabHalo, { backgroundColor: colors.tintSoft }]} />
+      <Animated.View style={buttonStyle}>
+        <Pressable
+          onPress={onPress}
+          onPressIn={() => (pressed.value = withTiming(1, { duration: 100 }))}
+          onPressOut={() =>
+            (pressed.value = withTiming(0, {
+              duration: 180,
+              easing: Easing.out(Easing.quad),
+            }))
+          }
+          style={[
+            styles.floatingCenterBtn,
+            {
+              backgroundColor: colors.tint,
+              borderColor: colors.surface,
+              shadowColor: colors.tint,
+              shadowOffset: { width: 0, height: 6 },
+              shadowOpacity: 0.45,
+              shadowRadius: 10,
+              elevation: 8,
+            },
+          ]}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Nouvelle transaction"
+        >
+          <Ionicons name="add" size={32} color={colors.onTint} />
+        </Pressable>
+      </Animated.View>
+    </View>
+  );
+}
+
+export default function TabLayout() {
+  const { colors } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const bottomInset = Math.max(insets.bottom, Platform.OS === "ios" ? 18 : 14);
+  const bottomPadding = Math.max(insets.bottom, Platform.OS === "ios" ? 18 : 10);
+  const barHeight = 58 + bottomPadding;
+
+  const openNewTransaction = () => router.push("/new-transaction");
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: false,
-        tabBarStyle: {
-          position: "absolute",
-          bottom: bottomInset,
-          left: 20,
-          right: 20,
-          height: 64,
-          borderRadius: 32,
-          backgroundColor: isDark ? "rgba(16, 24, 20, 0.96)" : "rgba(255, 255, 255, 0.96)",
-          borderWidth: 1,
-          borderColor: isDark ? "rgba(52, 211, 153, 0.25)" : "rgba(0, 0, 0, 0.08)",
-          shadowColor: isDark ? "#34D399" : "#000",
-          shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: isDark ? 0.25 : 0.08,
-          shadowRadius: 18,
-          elevation: 10,
-          paddingHorizontal: 12,
-        },
+        tabBarStyle: [
+          styles.tabBar,
+          {
+            height: barHeight,
+            paddingBottom: bottomPadding,
+            backgroundColor: colors.surface,
+            borderTopColor: colors.border,
+          },
+          Platform.OS === "android" ? styles.tabBarAndroid : styles.tabBarShadow,
+        ],
       }}
     >
-      {/* 1. Onglet Accueil */}
       <Tabs.Screen
         name="index"
         options={{
           title: "Accueil",
           tabBarIcon: ({ focused }) => (
-            <View
-              style={[
-                styles.tabItemWrap,
-                focused && [
-                  styles.tabItemActive,
-                  {
-                    backgroundColor: isDark
-                      ? "rgba(52, 211, 153, 0.16)"
-                      : "rgba(5, 150, 105, 0.1)",
-                  },
-                ],
-              ]}
-            >
-              <Ionicons
-                name={focused ? "home" : "home-outline"}
-                size={20}
-                color={
-                  focused
-                    ? isDark
-                      ? "#34D399"
-                      : "#059669"
-                    : colors.textSecondary
-                }
-              />
-              <Text
-                style={[
-                  styles.tabLabel,
-                  {
-                    color: focused
-                      ? isDark
-                        ? "#34D399"
-                        : "#059669"
-                      : colors.textSecondary,
-                    fontWeight: focused ? "700" : "500",
-                  },
-                ]}
-              >
-                Accueil
-              </Text>
-            </View>
+            <TabBarItem focused={focused} icon="home" label="Accueil" />
           ),
         }}
       />
 
-      {/* 2. Bouton Central [+] avec halo émeraude tactile */}
+      {/* Bouton central [+] surélevé */}
       <Tabs.Screen
         name="center-action"
         options={{
           title: "",
-          tabBarButton: () => (
-            <View style={styles.floatingCenterWrap}>
-              <Pressable
-                onPress={() => router.push("/new-transaction")}
-                style={({ pressed }) => [
-                  styles.floatingCenterBtn,
-                  {
-                    backgroundColor: isDark ? "#34D399" : "#059669",
-                    shadowColor: isDark ? "#34D399" : "#059669",
-                    opacity: pressed ? 0.9 : 1,
-                    transform: [{ scale: pressed ? 0.94 : 1 }],
-                  },
-                ]}
-                hitSlop={6}
-              >
-                <Ionicons
-                  name="add"
-                  size={30}
-                  color={isDark ? "#07100C" : "#FFFFFF"}
-                />
-              </Pressable>
-            </View>
-          ),
+          tabBarButton: () => <FloatingActionButton onPress={openNewTransaction} />,
         }}
         listeners={{
           tabPress: (e) => {
             e.preventDefault();
-            router.push("/new-transaction");
+            openNewTransaction();
           },
         }}
       />
 
-      {/* 3. Onglet Historique */}
       <Tabs.Screen
         name="transactions"
         options={{
           title: "Historique",
           tabBarIcon: ({ focused }) => (
-            <View
-              style={[
-                styles.tabItemWrap,
-                focused && [
-                  styles.tabItemActive,
-                  {
-                    backgroundColor: isDark
-                      ? "rgba(52, 211, 153, 0.16)"
-                      : "rgba(5, 150, 105, 0.1)",
-                  },
-                ],
-              ]}
-            >
-              <Ionicons
-                name={focused ? "receipt" : "receipt-outline"}
-                size={20}
-                color={
-                  focused
-                    ? isDark
-                      ? "#34D399"
-                      : "#059669"
-                    : colors.textSecondary
-                }
-              />
-              <Text
-                style={[
-                  styles.tabLabel,
-                  {
-                    color: focused
-                      ? isDark
-                        ? "#34D399"
-                        : "#059669"
-                      : colors.textSecondary,
-                    fontWeight: focused ? "700" : "500",
-                  },
-                ]}
-              >
-                Historique
-              </Text>
-            </View>
+            <TabBarItem focused={focused} icon="receipt" label="Historique" />
           ),
-        }}
-      />
-
-      {/* Routes secondaires désactivées de la navbar */}
-      <Tabs.Screen
-        name="analytics"
-        options={{
-          href: null,
-        }}
-      />
-
-      <Tabs.Screen
-        name="budgets"
-        options={{
-          href: null,
         }}
       />
     </Tabs>
@@ -192,36 +205,81 @@ export default function TabLayout() {
 }
 
 const styles = StyleSheet.create({
-  tabItemWrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
+  tabBar: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderLeftWidth: 0,
+    borderRightWidth: 0,
+    borderBottomWidth: 0,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    borderCurve: "continuous",
   },
-  tabItemActive: {
+  tabBarShadow: {
+    shadowColor: "#0D2E22",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+  },
+  tabBarAndroid: {
+    elevation: 16,
+  },
+  tabItemWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
     paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 22,
+    minWidth: 84,
+    borderCurve: "continuous",
+    position: "relative",
+  },
+  activePill: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: 22,
+    borderCurve: "continuous",
+  },
+  iconStack: {
+    width: TAB_ICON_SIZE,
+    height: TAB_ICON_SIZE,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconLayer: {
+    ...StyleSheet.absoluteFill,
+    alignItems: "center",
+    justifyContent: "center",
   },
   tabLabel: {
-    fontSize: 12,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: -0.1,
   },
   floatingCenterWrap: {
-    top: -16,
+    top: -24,
     justifyContent: "center",
     alignItems: "center",
   },
+  fabHalo: {
+    position: "absolute",
+    width: 74,
+    height: 74,
+    borderRadius: 37,
+    borderCurve: "continuous",
+  },
   floatingCenterBtn: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "rgba(255, 255, 255, 0.25)",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.45,
-    shadowRadius: 12,
-    elevation: 8,
+    borderWidth: 3,
+    borderCurve: "continuous",
   },
 });

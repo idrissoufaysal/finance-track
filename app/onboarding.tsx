@@ -1,225 +1,228 @@
 import React from "react";
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { View, Text, StyleSheet, Pressable, Platform, Dimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import Svg, { Defs, RadialGradient as SvgRadialGradient, Stop, Rect } from "react-native-svg";
+import { ONBOARDING_STORAGE_KEY } from "@/services/storageShared";
+import { StitchWalletHero } from "@/components/StitchWalletHero";
+
+const { width, height } = Dimensions.get("window");
 
 export default function OnboardingScreen() {
   const router = useRouter();
 
+  const finish = async () => {
+    try {
+      await AsyncStorage.setItem(ONBOARDING_STORAGE_KEY, "true");
+    } catch {
+      // Non-blocking: continue even if storage fails
+    }
+    router.replace("/(tabs)");
+  };
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      {/* Top Header: 01 / 03 + Progress Bar + Skip */}
-      <View style={styles.topHeader}>
-        <View style={styles.stepIndicator}>
-          <Text style={styles.stepText}>01 / 03</Text>
-          <View style={styles.progressTrack}>
-            <View style={styles.progressFill} />
+    <View style={styles.rootContainer}>
+      <StatusBar style="light" />
+
+      {/* 1. Fond organique dégradé vert forêt profond */}
+      <View style={StyleSheet.absoluteFill}>
+        <Svg width={width} height={height}>
+          <Defs>
+            {/* Lueur d'ambiance en haut à gauche */}
+            <SvgRadialGradient id="ambientGlowTop" cx="20%" cy="25%" rx="60%" ry="50%">
+              <Stop offset="0%" stopColor="#1C4B3D" stopOpacity="0.45" />
+              <Stop offset="60%" stopColor="#0E2B22" stopOpacity="0.1" />
+              <Stop offset="100%" stopColor="#071914" stopOpacity="0" />
+            </SvgRadialGradient>
+
+            {/* Lueur d'ambiance douce en bas */}
+            <SvgRadialGradient id="ambientGlowBottom" cx="60%" cy="80%" rx="70%" ry="60%">
+              <Stop offset="0%" stopColor="#2A5E4C" stopOpacity="0.35" />
+              <Stop offset="50%" stopColor="#0E2B22" stopOpacity="0.15" />
+              <Stop offset="100%" stopColor="#071914" stopOpacity="0" />
+            </SvgRadialGradient>
+          </Defs>
+
+          {/* Fond de base vert forêt sombre */}
+          <Rect x="0" y="0" width={width} height={height} fill="#091F18" />
+          {/* Couches de lueur diffuse */}
+          <Rect x="0" y="0" width={width} height={height} fill="url(#ambientGlowTop)" />
+          <Rect x="0" y="0" width={width} height={height} fill="url(#ambientGlowBottom)" />
+        </Svg>
+      </View>
+
+      <SafeAreaView style={styles.safeArea}>
+        {/* 2. Barre d'étapes supérieure : 01 / 03  [---]  Skip */}
+        <View style={styles.topNavigation}>
+          <View style={styles.stepperWrap}>
+            <Text style={styles.stepperText}>01 / 03</Text>
+            {/* Barre de progression avec 1er segment actif */}
+            <View style={styles.progressTrack}>
+              <View style={styles.progressSegmentActive} />
+              <View style={styles.progressSegmentInactive} />
+              <View style={styles.progressSegmentInactive} />
+            </View>
           </View>
+
+          <Pressable
+            onPress={finish}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Passer l'introduction"
+            style={({ pressed }) => [{ opacity: pressed ? 0.6 : 0.85 }]}
+          >
+            <Text style={styles.skipText}>Skip</Text>
+          </Pressable>
         </View>
 
-        <Pressable onPress={() => router.replace("/(tabs)")} hitSlop={8}>
-          <Text style={styles.skipText}>Passer</Text>
-        </Pressable>
-      </View>
-
-      {/* Main Title & Subtitle */}
-      <View style={styles.heroTextContainer}>
-        <Text style={styles.heroTitle}>Vos finances</Text>
-        <Text style={styles.heroTitle}>En toute sérénité</Text>
-        <Text style={styles.heroSubtitle}>
-          Suivez vos dépenses, maîtrisez vos budgets et épargnez en FCFA.
-        </Text>
-      </View>
-
-      {/* 3D Wallet & Card Illustration */}
-      <View style={styles.illustrationArea}>
-        <View style={styles.pedestalShadow} />
-        <View style={styles.walletBody}>
-          {/* Credit Card sticking out */}
-          <View style={styles.cardStickingOut}>
-            <View style={styles.goldChip} />
-            <Text style={styles.cardNumber}>•• 4820</Text>
-          </View>
-
-          {/* Wallet flap and golden clasp */}
-          <View style={styles.walletFlap}>
-            <View style={styles.goldClasp} />
-          </View>
+        {/* 3. Typographie d'accroche Stitch : Your Money • Better Days */}
+        <View style={styles.heroCopySection}>
+          <Text style={styles.heroTitleMain}>Your Money</Text>
+          <Text style={styles.heroTitleSub}>Better Days</Text>
+          <Text style={styles.heroSubtitle}>
+            Save, spend, and grow your wealth — all in one simple place.
+          </Text>
         </View>
-      </View>
 
-      {/* Bottom CTA Button */}
-      <View style={styles.bottomArea}>
-        <Pressable
-          onPress={() => router.replace("/(tabs)")}
-          style={({ pressed }) => [
-            styles.ctaButton,
-            { opacity: pressed ? 0.85 : 1 },
-          ]}
-        >
-          <Text style={styles.ctaText}>Commencer →</Text>
-        </Pressable>
-      </View>
-    </SafeAreaView>
+        {/* 4. Illustration 3D : Portefeuille en cuir & Carte sur piédestal */}
+        <View style={styles.artworkSection}>
+          <StitchWalletHero scale={width < 380 ? 0.92 : 1} />
+        </View>
+
+        {/* 5. Bouton d'action CTA : Get Started → */}
+        <View style={styles.bottomCtaSection}>
+          <Pressable
+            onPress={finish}
+            accessibilityRole="button"
+            accessibilityLabel="Commencer"
+            style={({ pressed }) => [
+              styles.ctaButton,
+              {
+                transform: [{ scale: pressed ? 0.98 : 1 }],
+                opacity: pressed ? 0.92 : 1,
+              },
+            ]}
+          >
+            <Text style={styles.ctaText}>Get Started</Text>
+            <Ionicons name="arrow-forward" size={18} color="#0C2D23" />
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  rootContainer: {
+    flex: 1,
+    backgroundColor: "#091F18",
+  },
   safeArea: {
     flex: 1,
-    backgroundColor: "#0A2016",
     justifyContent: "space-between",
   },
-  topHeader: {
+  topNavigation: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 24,
-    paddingTop: 12,
+    justifyContent: "space-between",
+    paddingHorizontal: 28,
+    paddingTop: Platform.OS === "android" ? 14 : 8,
+    zIndex: 20,
   },
-  stepIndicator: {
+  stepperWrap: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
   },
-  stepText: {
-    color: "#E2E8F0",
-    fontSize: 13,
+  stepperText: {
+    color: "rgba(255, 255, 255, 0.9)",
+    fontSize: 12,
     fontWeight: "600",
+    letterSpacing: 0.8,
   },
   progressTrack: {
-    width: 60,
-    height: 3,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    borderRadius: 2,
-    overflow: "hidden",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
   },
-  progressFill: {
-    width: 20,
-    height: "100%",
-    backgroundColor: "#FFFFFF",
+  progressSegmentActive: {
+    width: 22,
+    height: 3.5,
     borderRadius: 2,
+    backgroundColor: "#FFFFFF",
+  },
+  progressSegmentInactive: {
+    width: 14,
+    height: 3.5,
+    borderRadius: 2,
+    backgroundColor: "rgba(255, 255, 255, 0.22)",
   },
   skipText: {
-    color: "#CBD5E1",
+    color: "rgba(255, 255, 255, 0.85)",
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "500",
   },
-  heroTextContainer: {
-    paddingHorizontal: 24,
-    marginTop: 20,
+  heroCopySection: {
+    paddingHorizontal: 28,
+    marginTop: 16,
+    zIndex: 20,
   },
-  heroTitle: {
+  heroTitleMain: {
     color: "#FFFFFF",
-    fontSize: 40,
+    fontSize: 38,
     fontWeight: "800",
-    letterSpacing: -0.8,
-    lineHeight: 46,
+    letterSpacing: -0.6,
+    lineHeight: 44,
+  },
+  heroTitleSub: {
+    color: "#D2E7D7",
+    fontSize: 38,
+    fontWeight: "800",
+    letterSpacing: -0.6,
+    lineHeight: 44,
+    marginTop: 2,
   },
   heroSubtitle: {
-    color: "#94A3B8",
+    color: "rgba(255, 255, 255, 0.72)",
     fontSize: 15,
     fontWeight: "400",
-    marginTop: 14,
     lineHeight: 22,
-    maxWidth: 280,
+    marginTop: 14,
+    maxWidth: 270,
   },
-  illustrationArea: {
+  artworkSection: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    height: 300,
-    position: "relative",
+    zIndex: 10,
   },
-  pedestalShadow: {
-    position: "absolute",
-    bottom: 20,
-    width: 200,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
-    shadowColor: "#000",
-    shadowOpacity: 0.6,
-    shadowRadius: 18,
-  },
-  walletBody: {
-    width: 170,
-    height: 190,
-    borderRadius: 28,
-    backgroundColor: "#0F382A",
-    borderWidth: 2,
-    borderColor: "#195943",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    paddingBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  cardStickingOut: {
-    position: "absolute",
-    top: -40,
-    width: 140,
-    height: 90,
-    borderRadius: 14,
-    backgroundColor: "#3A5A4A",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.15)",
-    padding: 10,
-    justifyContent: "space-between",
-  },
-  goldChip: {
-    width: 24,
-    height: 18,
-    borderRadius: 4,
-    backgroundColor: "#F59E0B",
-  },
-  cardNumber: {
-    color: "#E2E8F0",
-    fontSize: 11,
-    fontWeight: "700",
-    alignSelf: "flex-end",
-    fontVariant: ["tabular-nums"],
-  },
-  walletFlap: {
-    width: 150,
-    height: 80,
-    borderRadius: 20,
-    backgroundColor: "#164B38",
-    borderWidth: 1,
-    borderColor: "#20684F",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  goldClasp: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: "#F59E0B",
-    borderWidth: 2,
-    borderColor: "#D97706",
-  },
-  bottomArea: {
-    paddingHorizontal: 24,
-    paddingBottom: 24,
+  bottomCtaSection: {
+    paddingHorizontal: 28,
+    paddingBottom: Platform.OS === "ios" ? 12 : 24,
+    zIndex: 20,
   },
   ctaButton: {
+    width: "100%",
+    height: 58,
     backgroundColor: "#FFFFFF",
-    paddingVertical: 18,
-    borderRadius: 9999,
+    borderRadius: 29,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    gap: 8,
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 18,
+    elevation: 8,
   },
   ctaText: {
-    color: "#0F382A",
-    fontSize: 16,
+    color: "#0C2D23",
+    fontSize: 17,
     fontWeight: "700",
+    letterSpacing: -0.2,
   },
 });

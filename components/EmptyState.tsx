@@ -2,8 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useColorScheme } from '@/components/useColorScheme';
-import Colors from '@/constants/Colors';
+import { useTheme } from '@/context/ThemeContext';
 
 interface Props {
   title?: string;
@@ -14,8 +13,7 @@ export function EmptyState({
   title = 'Aucune transaction',
   subtitle = 'Aucune opération financière enregistrée pour cette période.',
 }: Props) {
-  const theme = useColorScheme();
-  const colors = Colors[theme];
+  const { colors } = useTheme();
   const router = useRouter();
 
   return (
@@ -24,18 +22,17 @@ export function EmptyState({
         <Ionicons name="receipt-outline" size={36} color={colors.textSecondary} />
       </View>
       <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
-      <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-        {subtitle}
-      </Text>
+      <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{subtitle}</Text>
       <Pressable
         onPress={() => router.push('/new-transaction')}
+        accessibilityRole="button"
         style={({ pressed }) => [
           styles.button,
           { backgroundColor: colors.tint, opacity: pressed ? 0.8 : 1 },
         ]}
       >
-        <Ionicons name="add" size={18} color="#fff" />
-        <Text style={styles.btnText}>Ajouter une dépense</Text>
+        <Ionicons name="add" size={18} color={colors.onTint} />
+        <Text style={[styles.btnText, { color: colors.onTint }]}>Ajouter une opération</Text>
       </Pressable>
     </View>
   );
@@ -77,7 +74,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   btnText: {
-    color: '#fff',
     fontWeight: '600',
     fontSize: 14,
   },
